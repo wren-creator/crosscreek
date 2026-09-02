@@ -1,0 +1,24 @@
+# --- local env ---
+# real .env is generated from .env.example by setup.sh, never committed
+.env
+
+# --- runtime state ---
+# process-sim snapshots, saved PLC logic, historian db: all live in named
+# docker volumes. These patterns cover anyone who switches to a host bind mount.
+process-sim/state/
+historian/data/
+plc/**/runtime/
+net/ids/logs/
+net/ids/eve.json
+
+# --- os / editor cruft ---
+.DS_Store
+*.swp
+__pycache__/
+*.pyc
+
+# --- built ebook is committed on purpose; scratch build dirs are not ---
+docs/syllabus-epub/build/
+
+# --- committed on purpose ---
+# .claude/ .vscode/ .cursor/ are tracked intentionally when present.

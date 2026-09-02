@@ -1,0 +1,231 @@
+name: crosscreek
+
+# Cross Creek: a mock municipal water treatment plant and power substation with
+# simulated PLCs, for authorised ICS/OT security training.
+#
+# This base file is the FLAT topology: the network boundary forwards freely and
+# every deliberate weakness is on. It is the "how the attacks work" half of the
+# course. Fold in docker-compose.segmented.yml (./start.sh --segmented) for the
+# defended topology.
+#
+# Every published port binds to 127.0.0.1. start.sh refuses to launch otherwise
+# and status.sh re-audits. The edge and field networks are marked internal so
+# nothing on them can reach the internet; see docs/architecture.md.
+
+x-common: &common
+  restart: unless-stopped
+  init: true
+
+services:
+
+  # --- L3/3.5 network boundary -------------------------------------------------
+  router-fw:
+    <<: *common
+    build: ./net/router-fw
+    container_name: crosscreek-router-fw
+    cap_add: [NET_ADMIN, NET_RAW]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    environment:
+      FW_MODE: "${FLAT_NETWORK:-1}"   # 1 = forward everything, 0 = zones + conduits
+    networks:
+      edge-net:        { ipv4_address: 172.30.10.2 }
+      enterprise-net:  { ipv4_address: 172.30.20.2 }
+      dmz-net:         { ipv4_address: 172.30.30.2 }
+      ot-hmi-net:      { ipv4_address: 172.30.40.2 }
+      ot-plc-net:      { ipv4_address: 172.30.41.2 }
+    healthcheck:
+      test: ["CMD-SHELL", "nft list ruleset >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # --- L1 controllers --------------------------------------------------------
+  plc-water:
+    <<: *common
+    build: ./plc/water-openplc
+    container_name: crosscreek-plc-water
+    environment:
+      MODBUS_WRITE_OPEN: "${MODBUS_WRITE_OPEN:-1}"
+      PLC_WATER_PASS: "${PLC_WATER_PASS:-1100}"
+      DEFAULT_CREDS: "${DEFAULT_CREDS:-1}"
+    ports:
+      - "127.0.0.1:5020:502"     # Modbus/TCP
+      - "127.0.0.1:8091:8080"    # OpenPLC runtime web UI (logic upload, Session 4)
+    networks:
+      ot-plc-net: { ipv4_address: 172.30.41.10 }
+      sim-net:    { ipv4_address: 172.30.50.10 }
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',502),3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  plc-dosing:
+    <<: *common
+    build: ./plc/dosing-enip
+    container_name: crosscreek-plc-dosing
+    environment:
+      ENIP_ALLOW_LOGIC_DOWNLOAD: "${ENIP_ALLOW_LOGIC_DOWNLOAD:-1}"
+      PLC_DOSING_PASS: "${PLC_DOSING_PASS:-1100}"
+    ports:
+      - "127.0.0.1:4840:44818"   # EtherNet/IP (CIP)
+    networks:
+      ot-plc-net: { ipv4_address: 172.30.41.11 }
+      sim-net:    { ipv4_address: 172.30.50.11 }
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',44818),3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  plc-power:
+    <<: *common
+    build: ./plc/power-s7
+    container_name: crosscreek-plc-power
+    environment:
+      S7_NO_PASSWORD: "${S7_NO_PASSWORD:-1}"
+      PLC_POWER_PASS: "${PLC_POWER_PASS:-1100}"
+    ports:
+      - "127.0.0.1:1020:102"     # S7comm
+    networks:
+      ot-plc-net: { ipv4_address: 172.30.41.12 }
+      sim-net:    { ipv4_address: 172.30.50.12 }
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',102),3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  # --- L0 the physical process ---------------------------------------------
+  process-sim:
+    <<: *common
+    build: ./process-sim
+    container_name: crosscreek-process-sim
+    depends_on:
+      plc-water:  { condition: service_healthy }
+      plc-dosing: { condition: service_healthy }
+      plc-power:  { condition: service_healthy }
+    environment:
+      TICK_SECONDS: "1.0"
+    networks:
+      sim-net: { ipv4_address: 172.30.50.5 }
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8099/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  # --- L2 operator interfaces --------------------------------------------
+  hmi-water:
+    <<: *common
+    build: ./hmi/water
+    container_name: crosscreek-hmi-water
+    environment:
+      PLC_MODBUS_HOST: "172.30.41.10"
+      DEFAULT_CREDS: "${DEFAULT_CREDS:-1}"
+      HMI_ADMIN_USER: "${HMI_ADMIN_USER:-admin}"
+      HMI_ADMIN_PASS: "${HMI_ADMIN_PASS:-admin}"
+      VERBOSE_HMI_ERRORS: "${VERBOSE_HMI_ERRORS:-1}"
+    ports:
+      - "127.0.0.1:8081:8080"
+    networks:
+      ot-hmi-net: { ipv4_address: 172.30.40.10 }
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  hmi-power:
+    <<: *common
+    build: ./hmi/power
+    container_name: crosscreek-hmi-power
+    environment:
+      PLC_S7_HOST: "172.30.41.12"
+      DEFAULT_CREDS: "${DEFAULT_CREDS:-1}"
+      HMI_ADMIN_USER: "${HMI_ADMIN_USER:-admin}"
+      HMI_ADMIN_PASS: "${HMI_ADMIN_PASS:-admin}"
+      VERBOSE_HMI_ERRORS: "${VERBOSE_HMI_ERRORS:-1}"
+    ports:
+      - "127.0.0.1:8082:8080"
+    networks:
+      ot-hmi-net: { ipv4_address: 172.30.40.11 }
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+
+  # --- L3 engineering workstation (the pivot box) --------------------------
+  eng-ws:
+    <<: *common
+    build: ./eng-ws
+    container_name: crosscreek-eng-ws
+    environment:
+      EXPOSE_REMOTE_ACCESS: "${EXPOSE_REMOTE_ACCESS:-1}"
+    networks:
+      enterprise-net: { ipv4_address: 172.30.20.20 }
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /opt/projects/README.txt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # --- L3.5 data historian ------------------------------------------------
+  historian:
+    <<: *common
+    build: ./historian
+    container_name: crosscreek-historian
+    environment:
+      HISTORIAN_READONLY: "${HISTORIAN_READONLY:-0}"
+      POLL_HOSTS: "172.30.41.10:502,172.30.41.12:102"
+    volumes:
+      - historian-data:/var/lib/historian
+    networks:
+      enterprise-net: { ipv4_address: 172.30.20.30 }
+      dmz-net:        { ipv4_address: 172.30.30.30 }
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8086/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  # --- attacker workstation, boxed in ------------------------------------
+  attacker:
+    <<: *common
+    build: ./attacker
+    container_name: crosscreek-attacker
+    cap_add: [NET_ADMIN, NET_RAW]
+    environment:
+      ROUTER_EDGE_IP: "172.30.10.2"
+    networks:
+      edge-net: { ipv4_address: 172.30.10.10 }
+    command: ["sleep", "infinity"]
+
+networks:
+  # Hostile "internet" plus the field bus are internal: no route to the host
+  # LAN or beyond. The attacker box lives only on edge-net.
+  edge-net:
+    driver: bridge
+    internal: true
+    ipam: { config: [{ subnet: 172.30.10.0/24 }] }
+  enterprise-net:
+    driver: bridge
+    ipam: { config: [{ subnet: 172.30.20.0/24 }] }
+  dmz-net:
+    driver: bridge
+    ipam: { config: [{ subnet: 172.30.30.0/24 }] }
+  ot-hmi-net:
+    driver: bridge
+    ipam: { config: [{ subnet: 172.30.40.0/24 }] }
+  ot-plc-net:
+    driver: bridge
+    ipam: { config: [{ subnet: 172.30.41.0/24 }] }
+  sim-net:
+    driver: bridge
+    internal: true
+    ipam: { config: [{ subnet: 172.30.50.0/24 }] }
+
+volumes:
+  historian-data:
