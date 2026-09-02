@@ -8,7 +8,7 @@
 - [x] Network boundary: `router-fw` flat + segmented nftables, five bridges, `eng-ws`, `historian`
 - [x] Attacker box + the Session 2-4 attack scripts (recon, modbus, s7, cip, logic push)
 - [x] Defended half: segmented ruleset, controller hardening, `ids` (Suricata), verified block + alert
-- [ ] `docs/architecture.md`, `docs/scenarios.md` + trainee copy, `docs/verification.md`
+- [x] `docs/architecture.md`, `docs/scenarios.md` + trainee copy, `docs/verification.md`
 - [ ] *Cross Creek 101* EPUB, seven sessions
 - [ ] Instructor kit: agenda, setup runbook, rubric, slide outlines, capstone CTF
 

@@ -1,49 +1,60 @@
 # Cross Creek verification runbook
 
-> Stub. Section B fills in one row per scenario as each is proven. Sections A,
-> C, and D are structurally complete.
+End-to-end checks. Section A is containment, run it first and last every
+session. Section B walks the attack side (flat topology). Section D is the
+defended re-run. All attacker commands are run inside `crosscreek-attacker`
+(`docker exec -it crosscreek-attacker bash`).
 
-## Section A, containment (run first and last, every session)
+## Section A, containment (run first and last)
 
 | # | Command | Pass condition |
 |---|---|---|
-| A1 | `./status.sh` | exits 0; "audit clean" line printed |
-| A2 | `docker compose ps --format '{{.Name}}\t{{.Ports}}'` | every mapping reads `127.0.0.1:` |
-| A3 | `docker exec crosscreek-attacker ip route` | no `default` route present |
-| A4 | `docker exec crosscreek-attacker sh -c 'getent hosts example.com && curl -m5 -sI http://example.com'` | both fail (no DNS, no route) |
+| A1 | `./status.sh` | exits 0; prints "audit clean" |
+| A2 | `docker compose ps --format '{{.Name}}\t{{.Ports}}'` | every published mapping reads `127.0.0.1:` |
+| A3 | `docker exec crosscreek-attacker ip route` | default route is `blackhole` |
+| A4 | `docker exec crosscreek-attacker python3 -c 'import socket;print(socket.socket().connect_ex(("1.1.1.1",53)))'` | non-zero (unreachable) |
 | A5 | from another machine on your LAN: `nmap -Pn -p 8071,8072,5020,4840,1020 <this-host-ip>` | all filtered or closed |
 
-## Section B, per-scenario (attack side, flat topology)
-
-_One row per scenario, filled in as the matching service image lands. Shape:_
+## Section B, per-scenario (attack side, `./start.sh`)
 
 | # | Steps | Pass condition |
 |---|---|---|
-| B1 | _TBD_ | _TBD_ |
+| B1 | `python3 /opt/scripts/recon.py sweep` then `recon.py creds` | sweep lists 172.30.40.10/.11/.20/.21/.22; creds prints `admin/admin -> ACCEPTED` for both HMIs |
+| B2 | `nc -v 172.30.20.20 5900` | connects; banner says "no authentication configured" |
+| B3 | `python3 /opt/scripts/recon.py engws` | prints `notes.txt` with the controller passwords and `water_plc.st` |
+| B4 | `python3 /opt/scripts/modbus_attack.py stop-dist`; watch water HMI PT-401 | header pressure falls toward 0; `press_low` alarm latches within ~60 s |
+| B5 | `python3 /opt/scripts/modbus_attack.py overdose 15`; watch AIT-301 | chlorine climbs to ~4 ppm; `overdose` alarm flags, then the interlock pulls it back |
+| B6 | run B4 while a `pymodbus` loop re-writes IR 0-4 to nominal | water HMI reads healthy while pressure is actually collapsing |
+| B7 | `python3 /opt/scripts/s7_attack.py trip feeder` then `trip load` | power HMI: 52-F and 52-L show OPEN; frequency climbs past 50.5 Hz; excursion alarm |
+| B8 | `python3 /opt/scripts/s7_attack.py stop` | power HMI shows RTU CPU STOP; breaker commands stop taking effect |
+| B9 | `python3 /opt/scripts/cip_attack.py set 15` then `cip_attack.py logic-push` | after logic-push, `cip_attack.py read` shows `LogicForced [1]`, `LogicRev` incremented; chlorine runs past 4 ppm toward ~20 |
+| B10 | `python3 /opt/scripts/push_logic_water.py` | OpenPLC UI (`:8073`) shows program `crosscreek_water_v1_PATCHED`; raw tank LT-101 climbs to 100% |
+| B11 | `./reset.sh -y` | range returns to golden: setpoints nominal, golden program running, alarms clear |
 
 ## Section C, reset
 
 | # | Command | Pass condition |
 |---|---|---|
-| C1 | `./reset.sh -y` | completes; range healthy |
-| C2 | water HMI shows nominal levels, chlorine setpoint back to default | yes |
-| C3 | `plc-water` logic is the golden program (no attacker ladder changes) | yes |
-| C4 | historian rows cleared | yes |
+| C1 | `./reset.sh -y` | completes; all containers healthy |
+| C2 | water HMI: chlorine 2.5 ppm setpoint, header ~60 psi, no alarms | yes |
+| C3 | OpenPLC UI `:8073` program name is `crosscreek_water_v1 (golden)` | yes |
+| C4 | `curl -s 127.0.0.1:9411` (segmented only) or historian `/recent` | fresh samples, no residual attacker state |
 
-## Section D, defended side
+## Section D, defended side (`./start.sh --segmented`)
 
-| # | Command | Pass condition |
+| # | Steps | Pass condition |
 |---|---|---|
-| D1 | `./start.sh --segmented` | comes up healthy, `crosscreek-ids` running |
-| D2 | re-run each Group A script from `attacker` | A1/A2 targets unreachable (firewall drop) |
-| D3 | re-run each Group B/C script from `attacker` | writes rejected; connection refused or dropped |
-| D4 | `curl -s http://127.0.0.1:9411/` (or tail `ids-logs`) | one Suricata alert per attempt above |
-| D5 | trigger the Group B6 blind from a sanctioned host | HMI plausibility check flags the mismatch |
-| D6 | `docker exec crosscreek-historian sh -c 'nc -zv 172.30.41.10 502'` with `HISTORIAN_READONLY=1` | refused (one-way link) |
+| D1 | `./start.sh --segmented` | comes up healthy including `crosscreek-ids` and `crosscreek-jumphost` |
+| D2 | re-run B1 | `recon.py sweep` finds nothing; `creds` cannot reach the HMIs |
+| D3 | re-run B4, B7, B9, B10 from the attacker | every attempt times out (firewall drop) |
+| D4 | `docker exec crosscreek-router-fw nft list ruleset \| grep CC-FW-DROP` | drop counter is climbing |
+| D5 | `curl -s http://127.0.0.1:9411/` | one alert per attempt above ("edge host reaching a PLC protocol port", etc.) |
+| D6 | from `crosscreek-eng-ws`: reach a PLC only via the jump host (`ssh jumphost` then to OT) | direct eng-ws -> PLC is dropped; via jump host works |
+| D7 | on the water PLC, `MODBUS_WRITE_OPEN=0` clamps an out-of-range dose setpoint write | setpoint written by a test client is pulled back to the safe maximum |
 
 ## Section E, ebook
 
 | # | Command | Pass condition |
 |---|---|---|
-| E1 | `cd docs/syllabus-epub && ./build-epub.sh` | `mimetype` listed first and stored (method `stored`) |
+| E1 | `cd docs/syllabus-epub && ./build-epub.sh` | `mimetype` listed first and `stored` (not deflated) |
 | E2 | `epubcheck docs/Cross-Creek-101-Syllabus.epub` (if installed) | no errors |

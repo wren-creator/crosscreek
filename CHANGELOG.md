@@ -6,6 +6,15 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Added
+- Documentation filled in: `docs/scenarios.md` (all ten entries with the exact
+  attacker command, the physical consequence observed in the sim, and the fix
+  mapped to a CISA CPG and an ISA/IEC 62443 clause), `docs/scenarios-trainee.md`
+  generated from it with the fix removed, `docs/verification.md` Sections A-E
+  with per-scenario rows, and `docs/architecture.md` completed (segment map,
+  the flat-vs-segmented firewall, the IDS placement, and the three mechanics
+  worth explaining).
+
+### Added
 - IDS (`net/ids/`): Suricata 8 (community image; the package was dropped from
   Debian 12) sharing the firewall's network namespace, so it sees every
   segment. Six Cross Creek rules flag edge hosts reaching a PLC port, ICS
