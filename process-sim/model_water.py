@@ -29,7 +29,7 @@ class WaterState:
     header_psi: float = 60.0
     flow_gpm: float = 0.0
 
-    def step(self, dt, *, intake_pump, dist_pump, dose_enable, dose_setpoint_ppm):
+    def step(self, dt, *, intake_pump, dist_pump, dosing_active, dose_target_ppm):
         raw_moving = self.raw_level_pct > 2.0
         to_treatment = TREATMENT_RATE if raw_moving else 0.0
 
@@ -47,10 +47,11 @@ class WaterState:
         self.flow_gpm = 450.0 if to_treatment else 0.0
 
         # --- chlorine residual --------------------------------------
-        if dose_enable and self.flow_gpm > 1.0:
-            # first-order approach to the PLC's setpoint, so a tampered
-            # setpoint drags the residual straight up
-            self.chlorine_ppm += 0.18 * (dose_setpoint_ppm - self.chlorine_ppm) * dt
+        if dosing_active and self.flow_gpm > 1.0:
+            # first-order approach to the effective dose target, so tampering
+            # with the setpoint (Modbus), the metering rate (CIP), or the
+            # control logic (CIP logic push) all drag the residual straight up
+            self.chlorine_ppm += 0.18 * (dose_target_ppm - self.chlorine_ppm) * dt
         else:
             self.chlorine_ppm -= 0.03 * self.chlorine_ppm * dt
         self.chlorine_ppm = max(0.0, min(self.chlorine_ppm, 50.0))

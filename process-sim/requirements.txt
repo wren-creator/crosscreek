@@ -1,3 +1,4 @@
 pymodbus==3.6.9
 python-snap7==2.0.2
+cpppo==5.2.2
 Flask==3.0.3

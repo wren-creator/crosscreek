@@ -6,6 +6,21 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Added
+- Dosing controller: `plc-dosing`, wired into `process-sim` over CIP.
+  - `plc/dosing-enip/`: an embedded cpppo EtherNet/IP simulator on :44818
+    carrying `DoseSetpoint`, `DoseRate`, `FlowFeedback`, `Mode`, `LogicRev`,
+    `LogicForced`. A Flask service on :8080 is the unauthenticated
+    logic-update stand-in; POST while `ENIP_ALLOW_LOGIC_DOWNLOAD=1` forces the
+    metering pump to 100% and bypasses the downstream overdose interlock.
+  - `process-sim` gains a CIP loop: reads `DoseRate`/`LogicForced`, writes
+    `FlowFeedback`, and feeds an effective dose target into the water model.
+    `model_water.step()` now takes `dosing_active` + `dose_target_ppm` so
+    Modbus setpoint tamper, CIP rate tamper, and a CIP logic push all read as
+    chlorine.
+  - Verified: a CIP write to `DoseSetpoint` drives the residual into the
+    interlock; a logic push runs it to ~20 ppm with the interlock powerless.
+
+### Added
 - Substation vertical: `plc-power` + `hmi-power`, wired into `process-sim`.
   - `plc/power-s7/`: a python-snap7 server on :102 exposing DB1 (bus frequency,
     voltage, load, breaker status/command, CPU mode). Real S7 stop-CPU lands as

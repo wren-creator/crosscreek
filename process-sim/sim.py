@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """process-sim: drives the physical model from the PLC outputs.
 
-Two field loops:
-  * water  -> plc-water over Modbus/TCP
-  * power  -> plc-power over S7comm
+Three field loops:
+  * water   -> plc-water over Modbus/TCP
+  * power   -> plc-power over S7comm
+  * dosing  -> plc-dosing over EtherNet/IP (CIP)
 
-The dosing controller (CIP) mirrors its setpoint through plc-water for now and
-gets its own bridge in the dosing slice.
+The dosing loop reads the metering rate and logic state from the CIP controller
+and feeds the water model, so tampering with the Modbus setpoint, the CIP
+metering rate, or the CIP control logic all show up as chlorine.
 """
 import os
 import socket
@@ -15,6 +17,7 @@ import threading
 import time
 
 import snap7
+from cpppo.server.enip import client as enip_client
 from flask import Flask, jsonify
 from pymodbus.client import ModbusTcpClient
 
@@ -26,12 +29,17 @@ from model_water import WaterState
 WATER_HOST = os.environ.get("PLC_WATER_HOST", "172.30.41.10")
 WATER_PORT = int(os.environ.get("PLC_WATER_PORT", "502"))
 POWER_HOST = os.environ.get("PLC_POWER_HOST", "172.30.41.12")
+DOSING_HOST = os.environ.get("PLC_DOSING_HOST", "172.30.41.11")
 TICK = float(os.environ.get("TICK_SECONDS", "1.0"))
+
+# nominal metering-pump output that holds the design 2.5 ppm residual
+NOMINAL_DOSE_RATE = 55.0
 
 water = WaterState()
 power = PowerState()
 _hb = 0
-_last_ok = {"water": 0.0, "power": 0.0}
+_last_ok = {"water": 0.0, "power": 0.0, "dosing": 0.0}
+_dose = {"rate_pct": NOMINAL_DOSE_RATE, "forced": False, "rev": 1}
 
 
 # --- water -------------------------------------------------------------
@@ -42,12 +50,24 @@ def water_tick(client, dt):
     if co.isError() or hr.isError():
         return
     cpu_run = bool(co.bits[W.CO_CPU_RUN])
+    sp_modbus = hr.registers[W.HR_DOSE_SETPOINT_PPM_X100] / 100.0
+    coil_enable = bool(co.bits[W.CO_DOSE_ENABLE]) and cpu_run
+
+    if _dose["forced"]:
+        # CIP logic push: metering pump wide open, downstream interlock bypassed
+        dosing_active, dose_target = True, 20.0
+    elif coil_enable:
+        scale = _dose["rate_pct"] / NOMINAL_DOSE_RATE if _dose["rate_pct"] > 0 else 1.0
+        dosing_active, dose_target = True, sp_modbus * scale
+    else:
+        dosing_active, dose_target = False, 0.0
+
     water.step(
         dt,
         intake_pump=bool(co.bits[W.CO_INTAKE_PUMP]) and cpu_run,
         dist_pump=bool(co.bits[W.CO_DIST_PUMP]) and cpu_run,
-        dose_enable=bool(co.bits[W.CO_DOSE_ENABLE]) and cpu_run,
-        dose_setpoint_ppm=hr.registers[W.HR_DOSE_SETPOINT_PPM_X100] / 100.0,
+        dosing_active=dosing_active,
+        dose_target_ppm=dose_target,
     )
     _hb = (_hb + 1) & 0xFFFF
     client.write_registers(
@@ -78,7 +98,30 @@ def water_loop():
         time.sleep(max(0.0, TICK - (time.time() - t0)))
 
 
-# --- power -------------------------------------------------------------
+# --- dosing (CIP) ----------------------------------------------------
+def dosing_loop():
+    ip = socket.gethostbyname(DOSING_HOST)
+    while True:
+        t0 = time.time()
+        try:
+            with enip_client.connector(host=ip, port=44818, timeout=3) as conn:
+                ops = enip_client.parse_operations([
+                    f"FlowFeedback=(REAL){water.flow_gpm}",
+                    "DoseRate", "LogicForced", "LogicRev",
+                ])
+                results = list(conn.pipeline(operations=ops, depth=1))
+            vals = [val for _, _, _, _, sts, val in results]
+            # vals: [write_ok, [DoseRate], [LogicForced], [LogicRev]]
+            _dose["rate_pct"] = float(vals[1][0])
+            _dose["forced"] = bool(vals[2][0])
+            _dose["rev"] = int(vals[3][0])
+            _last_ok["dosing"] = time.time()
+        except Exception as exc:
+            print(f"[process-sim] dosing fault: {exc}")
+        time.sleep(max(0.0, TICK - (time.time() - t0)))
+
+
+# --- power (S7) ----------------------------------------------------
 def power_tick(client, dt):
     db = client.db_read(S.DB_NUMBER, 0, S.DB_SIZE)
     status = db[S.BREAKER_STATUS]
@@ -138,6 +181,11 @@ def state():
             header_psi=round(water.header_psi, 2),
             flow_gpm=round(water.flow_gpm, 1),
         ),
+        dosing=dict(
+            rate_pct=round(_dose["rate_pct"], 1),
+            logic_forced=_dose["forced"],
+            logic_rev=_dose["rev"],
+        ),
         power=dict(
             freq_hz=round(power.freq_hz, 3),
             voltage_kv=round(power.voltage_kv, 1),
@@ -150,6 +198,7 @@ def state():
 def main():
     threading.Thread(target=water_loop, daemon=True).start()
     threading.Thread(target=power_loop, daemon=True).start()
+    threading.Thread(target=dosing_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=8099, threaded=True, use_reloader=False)
 
 
