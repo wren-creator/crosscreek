@@ -49,13 +49,16 @@ while read -r name ports; do
 done < <(dc "${FILES[@]}" ps --format '{{.Name}}\t{{.Ports}}' 2>/dev/null)
 
 echo
-info "containment check: attacker box must not route off the lab"
+info "containment check: attacker box must not reach anything off the lab"
 if dc "${FILES[@]}" ps --format '{{.Name}}' 2>/dev/null | grep -q crosscreek-attacker; then
-  if dc "${FILES[@]}" exec -T attacker sh -c 'ip route | grep -q default' 2>/dev/null; then
-    bad "attacker container has a default route: it can reach the internet, stop the range"
-    AUDIT_FAIL=1
+  # probe a public address directly; a lab-contained box cannot open this
+  if dc "${FILES[@]}" exec -T attacker python3 -c \
+       'import socket,sys; s=socket.socket(); s.settimeout(3); sys.exit(s.connect_ex(("1.1.1.1",53)) == 0)' \
+       2>/dev/null; then
+    ok "attacker container cannot reach the internet"
   else
-    ok "attacker container has no default route"
+    bad "attacker container reached a public address, stop the range"
+    AUDIT_FAIL=1
   fi
 else
   warn "attacker container not running, skipped"

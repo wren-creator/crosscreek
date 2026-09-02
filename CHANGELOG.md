@@ -6,6 +6,32 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Added
+- Network boundary and the attacker workstation: the flat range is now
+  attackable end to end from a contained box.
+  - `net/router-fw/`: a Debian + nftables container bridging edge, IT, DMZ and
+    OT. `FLAT` forwards everything and masquerades so the attacker's replies
+    return; `SEGMENTED` is default-drop with only the IT<->DMZ, jump-host->OT
+    and historian->OT conduits open, every denied cross-zone packet logged.
+  - `attacker/`: python:slim + nmap and the open-source protocol libraries.
+    Its entrypoint routes to the range only through the firewall and
+    blackholes any default route. Scripts (`recon`, `modbus_attack`,
+    `s7_attack`, `cip_attack`, `push_logic_water`) are hardcoded to lab
+    addresses and cover scenarios 1-9.
+  - `eng-ws/`: serves the PLC project files and a `notes.txt` with every
+    controller address and password, plus an unauthenticated remote-desktop
+    port when `EXPOSE_REMOTE_ACCESS=1`.
+  - `historian/`: polls the water PLC (Modbus) and RTU (S7) into sqlite;
+    `HISTORIAN_READONLY` gates the write-back path.
+  - The OT network is now a single flat segment (as small utilities really
+    are); the Session 5 lesson is segmenting it. `edge-net` is no longer
+    `internal` (that blocked routing through the firewall); containment is a
+    no-egress attacker plus a `status.sh` reachability probe.
+  - Verified: from the attacker box, `recon.py sweep` maps all five OT
+    devices, `admin/admin` opens both HMIs, `notes.txt` yields the
+    credentials, and the Modbus/S7/CIP/logic attacks all land with visible
+    effects on the HMIs. `./status.sh` confirms the box has no internet.
+
+### Added
 - Dosing controller: `plc-dosing`, wired into `process-sim` over CIP.
   - `plc/dosing-enip/`: an embedded cpppo EtherNet/IP simulator on :44818
     carrying `DoseSetpoint`, `DoseRate`, `FlowFeedback`, `Mode`, `LogicRev`,

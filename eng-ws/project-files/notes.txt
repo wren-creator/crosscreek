@@ -1,0 +1,14 @@
+Cross Creek WTP / Substation - controls quick reference
+(do not print, do not email - Jerry)
+
+  water PLC (OpenPLC)   172.30.40.20   web openplc / openplc     Modbus 502
+  dosing controller     172.30.40.21   keyswitch REMOTE          EtherNet/IP 44818
+  substation RTU        172.30.40.22   no station password set   S7 102
+  water HMI             172.30.40.10   admin / admin
+  power HMI             172.30.40.11   admin / admin
+  historian             172.30.30.30
+
+  remote in from home:  VNC to 172.30.20.20 :5900  (no password, works from the office wifi)
+
+golden PLC program is water_plc.st in this folder. Restore from here if the
+runtime gets flaky again.

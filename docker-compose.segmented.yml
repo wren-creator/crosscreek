@@ -3,11 +3,11 @@
 # or:
 #   docker compose -f docker-compose.yml -f docker-compose.segmented.yml up -d
 #
-# It flips every deliberate weakness off, puts the network boundary into
-# zones-and-conduits mode, turns the IDS on, makes the historian link one-way,
-# and adds a DMZ jump host for remote access. This is the "now secure it" half
-# of the course. Re-run the Session 2-4 attacks against this and watch them
-# fail, then read the alerts the IDS raised.
+# It flips every deliberate weakness off, puts the boundary firewall into
+# zones-and-conduits mode, enforces a source allowlist inside the PLCs,
+# turns the IDS on, makes the historian link one-way, and adds a DMZ jump
+# host. Re-run the Session 2-4 attacks against this and watch them fail, then
+# read the alerts the IDS raised.
 
 services:
   router-fw:
@@ -16,7 +16,7 @@ services:
 
   plc-water:
     environment:
-      MODBUS_WRITE_OPEN: "0"             # source allowlist enforced in the PLC too
+      MODBUS_WRITE_OPEN: "0"             # PLC-side source allowlist enforced
       DEFAULT_CREDS: "0"
 
   plc-dosing:
@@ -39,14 +39,13 @@ services:
 
   eng-ws:
     environment:
-      EXPOSE_REMOTE_ACCESS: "0"          # remote access now goes through the jump host
+      EXPOSE_REMOTE_ACCESS: "0"          # remote access now via the jump host
 
   historian:
     environment:
       HISTORIAN_READONLY: "1"            # one-way: OT -> DMZ only
 
-  # Suricata + Zeek on a mirror of the OT segments. Off in the flat file,
-  # added here for Session 6.
+  # Suricata on the router's interfaces. Off in the flat file, added here.
   ids:
     restart: unless-stopped
     init: true
@@ -61,24 +60,24 @@ services:
     ports:
       - "127.0.0.1:9411:9411"            # tiny EVE-json tail viewer
     healthcheck:
-      test: ["CMD-SHELL", "pgrep suricata >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "pgrep -x suricata >/dev/null || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 6
 
-  # DMZ jump host: the only sanctioned way in for remote engineering. SSH with
-  # a lab key, and it can reach the HMI net but not the PLC net directly.
+  # DMZ jump host: the only sanctioned way in for remote engineering. Reaches
+  # the OT network but is itself reachable only from the DMZ.
   jumphost:
     restart: unless-stopped
     init: true
-    build: ./net/router-fw            # reuse the base image; different entrypoint
-    entrypoint: ["/usr/sbin/sshd", "-D", "-e"]
+    build: ./net/router-fw            # reuse the base image, different entrypoint
+    entrypoint: ["/bin/sh", "-c", "/usr/sbin/sshd -D -e"]
     container_name: crosscreek-jumphost
     networks:
-      dmz-net:    { ipv4_address: 172.30.30.40 }
-      ot-hmi-net: { ipv4_address: 172.30.40.40 }
+      dmz-net: { ipv4_address: 172.30.30.40 }
+      ot-net: { ipv4_address: 172.30.40.40 }
     healthcheck:
-      test: ["CMD-SHELL", "pgrep sshd >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "pgrep -x sshd >/dev/null || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5

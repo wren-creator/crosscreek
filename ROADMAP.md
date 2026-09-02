@@ -5,9 +5,9 @@
 - [x] Repo scaffold, lifecycle scripts, flat + segmented compose topologies
 - [x] Process core: `process-sim` + `plc-water` (OpenPLC / Modbus) + `hmi-water`
 - [x] Vendor PLCs: `plc-power` (S7) + `plc-dosing` (CIP) + `hmi-power`
-- [ ] Network boundary: `router-fw` flat ruleset, the six bridges
-- [ ] Attacker box + the Session 2-4 attack scripts
-- [ ] Defended half: segmented ruleset, controller hardening, `ids`, one-way historian
+- [x] Network boundary: `router-fw` flat + segmented nftables, five bridges, `eng-ws`, `historian`
+- [x] Attacker box + the Session 2-4 attack scripts (recon, modbus, s7, cip, logic push)
+- [~] Defended half: segmented ruleset + controller hardening done; `ids` (Suricata) next; verify re-run
 - [ ] `docs/architecture.md`, `docs/scenarios.md` + trainee copy, `docs/verification.md`
 - [ ] *Cross Creek 101* EPUB, seven sessions
 - [ ] Instructor kit: agenda, setup runbook, rubric, slide outlines, capstone CTF
