@@ -10,6 +10,9 @@ Coils (FC 1 read, FC 5/15 write) -- actuator commands and CPU state
     2  CO_DOSE_ENABLE        chlorine dosing enable
     3  CO_CPU_RUN            1 = program executing (soft keyswitch RUN), 0 = STOP
     4  CO_BYPASS_INTERLOCK   operator bypass of the high-level interlock
+    5  CO_INTAKE_HAND        1 = intake pump in HAND, program leaves it to the operator
+    6  CO_DIST_HAND          1 = distribution pump in HAND
+    7  CO_DOSE_HAND          1 = dosing in HAND
 
 Discrete inputs (FC 2 read) -- derived status
     0  DI_LEVEL_LOW          raw tank below low setpoint
@@ -47,6 +50,9 @@ CO_DIST_PUMP = 1
 CO_DOSE_ENABLE = 2
 CO_CPU_RUN = 3
 CO_BYPASS_INTERLOCK = 4
+CO_INTAKE_HAND = 5     # 1 = operator has taken this pump to HAND (manual)
+CO_DIST_HAND = 6
+CO_DOSE_HAND = 7
 
 # discrete inputs
 DI_LEVEL_LOW = 0

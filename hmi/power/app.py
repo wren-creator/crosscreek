@@ -105,7 +105,12 @@ def api_cmd():
         ("bus_tie", True): S.CMD_TIE_CLOSE, ("bus_tie", False): S.CMD_TIE_OPEN,
         ("load", True): S.CMD_LOAD_CLOSE, ("load", False): S.CMD_LOAD_OPEN,
     }[(cmd["breaker"], bool(cmd["close"]))]
-    plc().db_write(S.DB_NUMBER, S.BREAKER_CMD, bytearray([1 << bit]))
+    c = plc()
+    db = c.db_read(S.DB_NUMBER, 0, S.DB_SIZE)
+    c.db_write(S.DB_NUMBER, S.BREAKER_CMD, bytearray([1 << bit]))
+    if db[S.CPU_MODE] != 1:
+        return jsonify(ok=True, warning="RTU CPU is in STOP; breaker commands "
+                       "are queued but will not execute until it is running")
     return jsonify(ok=True)
 
 

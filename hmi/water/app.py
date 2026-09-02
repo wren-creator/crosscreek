@@ -101,6 +101,11 @@ def api_state():
             distribution=bool(co.bits[W.CO_DIST_PUMP]),
             dosing=bool(co.bits[W.CO_DOSE_ENABLE]),
         ),
+        mode=dict(
+            intake="HAND" if co.bits[W.CO_INTAKE_HAND] else "AUTO",
+            distribution="HAND" if co.bits[W.CO_DIST_HAND] else "AUTO",
+            dosing="HAND" if co.bits[W.CO_DOSE_HAND] else "AUTO",
+        ),
         alarms=dict(
             level_low=bool(di.bits[W.DI_LEVEL_LOW]),
             level_high=bool(di.bits[W.DI_LEVEL_HIGH]),
@@ -130,9 +135,16 @@ def api_cmd():
     c = plc()
     cmd = request.json or {}
     action = cmd.get("action")
-    if action == "pump":
-        coil = {"intake": W.CO_INTAKE_PUMP, "distribution": W.CO_DIST_PUMP}[cmd["which"]]
-        c.write_coil(coil, bool(cmd["on"]), slave=1)
+    pump_coil = {"intake": W.CO_INTAKE_PUMP, "distribution": W.CO_DIST_PUMP,
+                 "dosing": W.CO_DOSE_ENABLE}
+    hand_coil = {"intake": W.CO_INTAKE_HAND, "distribution": W.CO_DIST_HAND,
+                 "dosing": W.CO_DOSE_HAND}
+    if action == "mode":
+        # AUTO / HAND per device. Taking a pump to HAND is what lets the
+        # start/stop buttons stick; in AUTO the control program owns the output.
+        c.write_coil(hand_coil[cmd["which"]], cmd["hand"] == "HAND", slave=1)
+    elif action == "pump":
+        c.write_coil(pump_coil[cmd["which"]], bool(cmd["on"]), slave=1)
     elif action == "dose_setpoint":
         c.write_register(
             W.HR_DOSE_SETPOINT_PPM_X100, int(float(cmd["ppm"]) * 100), slave=1

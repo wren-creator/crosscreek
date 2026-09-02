@@ -74,6 +74,7 @@
       <button onclick="brk('bus_tie',0)">trip</button></span></div>
     <div class="row">52-L <span><button onclick="brk('load',1)">close</button>
       <button onclick="brk('load',0)">trip</button></span></div>
+    <div id="toast" style="margin-top:.6em;font-size:.78em;color:#7fd4c1;min-height:1.1em"></div>
   </div>
 </div>
 <script>
@@ -96,11 +97,25 @@ async function tick(){
   txt($('s-feeder'), r.breakers.feeder); txt($('s-tie'), r.breakers.bus_tie);
   txt($('s-load'), r.breakers.load);
   const off = Math.abs(r.pv.freq_hz - 50.0) > 0.5;
-  $('alarm').style.display = off ? 'block' : 'none';
+  const stopped = r.cpu_mode !== 'RUN';
+  $('alarm').textContent = stopped
+    ? '⚠ RTU CPU IN STOP — CONTROL LOST'
+    : '⚠ FREQUENCY EXCURSION';
+  $('alarm').style.display = (off || stopped) ? 'block' : 'none';
   $('freq').setAttribute('fill', off ? '#ff8a80' : '#e0b96b');
 }
-async function brk(breaker, close){ await fetch('/api/cmd',{method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({breaker,close})}); setTimeout(tick, 300); }
+function toast(msg){ $('toast').textContent = msg;
+  clearTimeout(toast.t); toast.t = setTimeout(()=>{$('toast').textContent='';}, 3000); }
+async function brk(breaker, close){
+  try {
+    const res = await fetch('/api/cmd',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({breaker,close})});
+    const j = await res.json();
+    toast(j.warning ? ('⚠ ' + j.warning)
+          : ('→ 52-' + breaker[0].toUpperCase() + ' ' + (close ? 'close' : 'trip')));
+  } catch(e){ toast('✗ ' + e); }
+  setTimeout(tick, 300);
+}
 tick(); setInterval(tick, 1500);
 </script>

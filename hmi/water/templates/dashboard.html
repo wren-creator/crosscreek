@@ -20,6 +20,7 @@
   button:hover{background:#2e7d68}
   input{width:70px;background:#12202b;border:1px solid #3a5065;color:#e8f0f7;padding:.25em;border-radius:3px}
   .alarm{color:#ff8a80}.ok{color:#7fd4c1}
+  .mode{font-size:.78em;letter-spacing:.05em}
 </style>
 <header>
   <h1>Cross Creek WTP &mdash; Plant Overview</h1>
@@ -77,18 +78,34 @@
 
   <div class="card">
     <h2>Controls</h2>
-    <div class="row">Intake pump
-      <span><button onclick="pump('intake',1)">start</button>
+    <p style="font-size:.72em;color:#9fb3c6;margin:.2em 0 .8em">
+      A pump in <b>AUTO</b> is driven by the PLC program; start/stop will not
+      hold. Switch it to <b>HAND</b> to take manual control.</p>
+    <div class="row">Intake pump <b id="m-intake" class="mode">--</b></div>
+    <div class="row"><span>
+      <button onclick="mode('intake','AUTO')">AUTO</button>
+      <button onclick="mode('intake','HAND')">HAND</button></span><span>
+      <button onclick="pump('intake',1)">start</button>
       <button onclick="pump('intake',0)">stop</button></span></div>
-    <div class="row">Dist. pump
-      <span><button onclick="pump('distribution',1)">start</button>
+    <div class="row">Dist. pump <b id="m-distribution" class="mode">--</b></div>
+    <div class="row"><span>
+      <button onclick="mode('distribution','AUTO')">AUTO</button>
+      <button onclick="mode('distribution','HAND')">HAND</button></span><span>
+      <button onclick="pump('distribution',1)">start</button>
       <button onclick="pump('distribution',0)">stop</button></span></div>
+    <div class="row">Dosing <b id="m-dosing" class="mode">--</b></div>
+    <div class="row"><span>
+      <button onclick="mode('dosing','AUTO')">AUTO</button>
+      <button onclick="mode('dosing','HAND')">HAND</button></span><span>
+      <button onclick="pump('dosing',1)">start</button>
+      <button onclick="pump('dosing',0)">stop</button></span></div>
     <div class="row">Dose setpoint
       <span><input id="sp-cl" type="number" step="0.1" value="2.5">
       <button onclick="doseSp()">set</button></span></div>
     <div class="row">Header target
       <span><input id="sp-psi" type="number" value="60">
       <button onclick="pressSp()">set</button></span></div>
+    <div id="toast" style="margin-top:.6em;font-size:.78em;color:#7fd4c1;min-height:1.1em"></div>
   </div>
 </div>
 <script>
@@ -118,11 +135,26 @@ async function tick(){
   $('p-intake').setAttribute('fill', col(r.pumps.intake));
   $('p-dist').setAttribute('fill', col(r.pumps.distribution));
   $('p-dose').setAttribute('fill', col(r.pumps.dosing));
+  for(const k of ['intake','distribution','dosing']){
+    const el = $('m-'+k); if(!el || !r.mode) continue;
+    el.textContent = r.mode[k];
+    el.className = 'mode ' + (r.mode[k] === 'HAND' ? 'alarm' : 'ok');
+  }
 }
-async function cmd(body){ await fetch('/api/cmd',{method:'POST',
-  headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); tick(); }
-const pump = (which,on) => cmd({action:'pump',which,on});
-const doseSp = () => cmd({action:'dose_setpoint',ppm:$('sp-cl').value});
-const pressSp = () => cmd({action:'press_target',psi:$('sp-psi').value});
+function toast(msg){ $('toast').textContent = msg;
+  clearTimeout(toast.t); toast.t = setTimeout(()=>{$('toast').textContent='';}, 2500); }
+async function cmd(body, label){
+  try {
+    const res = await fetch('/api/cmd',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j = await res.json();
+    toast(res.ok && j.ok ? ('→ ' + label) : ('✗ ' + (j.error || res.status)));
+  } catch(e){ toast('✗ ' + e); }
+  tick();
+}
+const mode = (which,m) => cmd({action:'mode',which,hand:m}, which+' → '+m);
+const pump = (which,on) => cmd({action:'pump',which,on}, which+' '+(on?'start':'stop'));
+const doseSp = () => cmd({action:'dose_setpoint',ppm:$('sp-cl').value}, 'dose setpoint '+$('sp-cl').value+' ppm');
+const pressSp = () => cmd({action:'press_target',psi:$('sp-psi').value}, 'header target '+$('sp-psi').value+' psi');
 tick(); setInterval(tick, 1500);
 </script>

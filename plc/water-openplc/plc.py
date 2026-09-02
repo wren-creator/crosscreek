@@ -89,6 +89,9 @@ class IO:
         self.dist_pump = bool(co[M.CO_DIST_PUMP])
         self.dose_enable = bool(co[M.CO_DOSE_ENABLE])
         self.bypass_interlock = bool(co[M.CO_BYPASS_INTERLOCK])
+        self.intake_hand = bool(co[M.CO_INTAKE_HAND])
+        self.dist_hand = bool(co[M.CO_DIST_HAND])
+        self.dose_hand = bool(co[M.CO_DOSE_HAND])
 
     def commit(self):
         wr(1, M.CO_INTAKE_PUMP, [int(self.intake_pump)])

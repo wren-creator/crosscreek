@@ -32,22 +32,27 @@ def control(io):
 
 GOLDEN = b"""PROGRAM_NAME = "crosscreek_water_v1 (golden)"
 def control(io):
-    if io.raw_level_pct <= io.level_low_sp:
-        io.intake_pump = True
-    elif io.raw_level_pct >= io.level_high_sp:
-        io.intake_pump = False
+    if not io.intake_hand:
+        if io.raw_level_pct <= io.level_low_sp:
+            io.intake_pump = True
+        elif io.raw_level_pct >= io.level_high_sp:
+            io.intake_pump = False
     if io.raw_level_pct >= 98.0 and not io.bypass_interlock:
         io.intake_pump = False
-    io.dose_enable = io.flow_gpm > 1.0
+    if not io.dose_hand:
+        io.dose_enable = io.flow_gpm > 1.0
     if io.chlorine_ppm >= io.safe_max_ppm:
         io.dose_enable = False
-    if io.dist_press_psi < io.dist_press_target - 3:
-        io.dist_pump = True
-    elif io.dist_press_psi > io.dist_press_target + 3:
-        io.dist_pump = False
+    if not io.dist_hand:
+        if io.dist_press_psi < io.dist_press_target - 3:
+            io.dist_pump = True
+        elif io.dist_press_psi > io.dist_press_target + 3:
+            io.dist_pump = False
     if io.treated_level_pct < 10.0:
         io.dist_pump = False
 """
+
+# Prefer `./reset.sh` for a full restore; this is the quick in-place version.
 
 
 def upload(blob, label):
