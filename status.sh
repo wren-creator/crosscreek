@@ -20,8 +20,8 @@ dc "${FILES[@]}" ps
 echo
 info "endpoint checks"
 for pair in \
-  "water HMI|http://127.0.0.1:8081/health" \
-  "power HMI|http://127.0.0.1:8082/health"; do
+  "water HMI|http://127.0.0.1:8071/health" \
+  "power HMI|http://127.0.0.1:8072/health"; do
   label="${pair%%|*}"; url="${pair#*|}"
   code="$(curl -fsS -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || true)"
   [ "$code" = "200" ] && ok "$label  ($code)" || bad "$label  ($code)"

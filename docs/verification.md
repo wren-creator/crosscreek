@@ -11,7 +11,7 @@
 | A2 | `docker compose ps --format '{{.Name}}\t{{.Ports}}'` | every mapping reads `127.0.0.1:` |
 | A3 | `docker exec crosscreek-attacker ip route` | no `default` route present |
 | A4 | `docker exec crosscreek-attacker sh -c 'getent hosts example.com && curl -m5 -sI http://example.com'` | both fail (no DNS, no route) |
-| A5 | from another machine on your LAN: `nmap -Pn -p 8081,8082,5020,4840,1020 <this-host-ip>` | all filtered or closed |
+| A5 | from another machine on your LAN: `nmap -Pn -p 8071,8072,5020,4840,1020 <this-host-ip>` | all filtered or closed |
 
 ## Section B, per-scenario (attack side, flat topology)
 

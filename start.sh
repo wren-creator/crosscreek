@@ -43,8 +43,8 @@ done
 
 echo
 ok "Cross Creek is up  [$MODE]"
-echo "  water HMI      http://127.0.0.1:8081/"
-echo "  power HMI      http://127.0.0.1:8082/"
+echo "  water HMI      http://127.0.0.1:8071/"
+echo "  power HMI      http://127.0.0.1:8072/"
 echo "  water PLC      127.0.0.1:5020   Modbus/TCP"
 echo "  dosing PLC     127.0.0.1:4840   EtherNet/IP (CIP)"
 echo "  substation RTU 127.0.0.1:1020   S7comm"

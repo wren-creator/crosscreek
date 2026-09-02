@@ -51,7 +51,7 @@ services:
       DEFAULT_CREDS: "${DEFAULT_CREDS:-1}"
     ports:
       - "127.0.0.1:5020:502"     # Modbus/TCP
-      - "127.0.0.1:8091:8080"    # OpenPLC runtime web UI (logic upload, Session 4)
+      - "127.0.0.1:8073:8080"    # OpenPLC runtime web UI (logic upload, Session 4)
     networks:
       ot-plc-net: { ipv4_address: 172.30.41.10 }
       sim-net:    { ipv4_address: 172.30.50.10 }
@@ -128,7 +128,7 @@ services:
       HMI_ADMIN_PASS: "${HMI_ADMIN_PASS:-admin}"
       VERBOSE_HMI_ERRORS: "${VERBOSE_HMI_ERRORS:-1}"
     ports:
-      - "127.0.0.1:8081:8080"
+      - "127.0.0.1:8071:8080"
     networks:
       ot-hmi-net: { ipv4_address: 172.30.40.10 }
     healthcheck:
@@ -148,7 +148,7 @@ services:
       HMI_ADMIN_PASS: "${HMI_ADMIN_PASS:-admin}"
       VERBOSE_HMI_ERRORS: "${VERBOSE_HMI_ERRORS:-1}"
     ports:
-      - "127.0.0.1:8082:8080"
+      - "127.0.0.1:8072:8080"
     networks:
       ot-hmi-net: { ipv4_address: 172.30.40.11 }
     healthcheck:

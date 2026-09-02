@@ -8,7 +8,7 @@ require_docker
 
 # Host ports the range publishes (all on 127.0.0.1). If any is already taken
 # the containers will fail to bind.
-PORTS=(8081 8082 8091 5020 4840 1020 9411)
+PORTS=(8071 8072 8073 5020 4840 1020 9411)
 info "checking host ports ${PORTS[*]}"
 BUSY=0
 for p in "${PORTS[@]}"; do

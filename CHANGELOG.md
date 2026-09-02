@@ -6,6 +6,25 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Added
+- Process core: the water plant runs end to end.
+  - `plc/water-openplc/`: a soft PLC serving real Modbus/TCP on :502, an
+    OpenPLC-style 200 ms scan loop over a swappable `control(io)` program, and
+    a runtime web UI on :8073 (view program, stop/start CPU, upload program).
+    The upload path is scenario 9 and is a documented stand-in for a vendor
+    download. `MODBUS_WRITE_OPEN` toggles command validation and the keyswitch.
+  - `process-sim/`: a lumped physical model (raw tank, clearwell, chlorine
+    residual, header pressure) that reads the PLC's actuator coils over Modbus
+    and writes sensor values back every tick.
+  - `hmi/water/`: Flask + inline-SVG P&ID; browser polls `/api/state`, controls
+    POST to `/api/cmd`. `DEFAULT_CREDS` gates `admin/admin`; `VERBOSE_HMI_ERRORS`
+    leaks tracebacks and the tag map.
+  - Verified against the running stack: a Modbus register write drives chlorine
+    past the overdose threshold; a logic upload with the interlock removed holds
+    the intake pump on and overflows the raw tank.
+- Host HMI/UI ports moved off 8081-8091 (collision with a local service) to
+  8071 (water HMI), 8072 (power HMI), 8073 (water PLC runtime UI).
+
+### Added (scaffold)
 - Repo scaffold: lifecycle scripts (`setup.sh`, `start.sh`, `stop.sh`,
   `status.sh`, `reset.sh`) with the loopback-only guard in `lib.sh` and an
   attacker-containment check in `status.sh`.

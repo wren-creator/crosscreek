@@ -1,0 +1,128 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Cross Creek Water &mdash; Plant Overview</title>
+<style>
+  body{background:#12202b;color:#d7e3ef;font-family:"Segoe UI",system-ui,sans-serif;margin:0}
+  header{background:#0d1a24;padding:.6em 1.2em;display:flex;justify-content:space-between;
+         align-items:center;border-bottom:2px solid #2e7d68}
+  header h1{font-size:1em;letter-spacing:.1em;text-transform:uppercase;color:#7fd4c1;margin:0}
+  header a{color:#9fb3c6;font-size:.8em;text-decoration:none}
+  #overdose{display:none;background:#b00020;color:#fff;text-align:center;padding:.5em;
+            font-weight:700;letter-spacing:.15em}
+  .wrap{display:flex;gap:1.4em;padding:1.4em;flex-wrap:wrap}
+  svg{background:#0d1a24;border:1px solid #24384a;border-radius:6px}
+  .card{background:#1b2c3a;border:1px solid #24384a;border-radius:6px;padding:1em 1.2em;min-width:230px}
+  .card h2{font-size:.78em;letter-spacing:.08em;text-transform:uppercase;color:#9fb3c6;margin:.1em 0 .8em}
+  .row{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;margin:.3em 0}
+  .row b{color:#e8f0f7}
+  button{background:#26485c;border:1px solid #3a5065;color:#d7e3ef;padding:.35em .7em;
+         border-radius:3px;cursor:pointer;font-size:.8em}
+  button:hover{background:#2e7d68}
+  input{width:70px;background:#12202b;border:1px solid #3a5065;color:#e8f0f7;padding:.25em;border-radius:3px}
+  .alarm{color:#ff8a80}.ok{color:#7fd4c1}
+</style>
+<header>
+  <h1>Cross Creek WTP &mdash; Plant Overview</h1>
+  <span>{{ user }} &nbsp;|&nbsp; <a href="/logout">sign out</a></span>
+</header>
+<div id="overdose">&#9888; CHLORINE OVERDOSE &mdash; DOSING INTERLOCK</div>
+<div class="wrap">
+  <svg id="pid" width="560" height="360" viewBox="0 0 560 360">
+    <!-- raw water tank -->
+    <rect x="30" y="70" width="90" height="180" fill="#12202b" stroke="#5b7a92"/>
+    <rect id="rawfill" x="31" y="130" width="88" height="119" fill="#2f6f9e"/>
+    <text x="75" y="60" text-anchor="middle" fill="#9fb3c6" font-size="11">RAW  LT-101</text>
+    <!-- intake pump -->
+    <circle id="p-intake" cx="75" cy="285" r="14" fill="#3a3f45" stroke="#5b7a92"/>
+    <text x="75" y="315" text-anchor="middle" fill="#9fb3c6" font-size="10">P-101</text>
+    <line x1="75" y1="250" x2="75" y2="271" stroke="#5b7a92" stroke-width="3"/>
+    <!-- pipe to treatment / dosing -->
+    <line x1="120" y1="160" x2="240" y2="160" stroke="#5b7a92" stroke-width="3"/>
+    <circle id="p-dose" cx="240" cy="120" r="12" fill="#3a3f45" stroke="#5b7a92"/>
+    <line x1="240" y1="132" x2="240" y2="160" stroke="#5b7a92" stroke-width="3"/>
+    <text x="240" y="104" text-anchor="middle" fill="#9fb3c6" font-size="10">MP-301</text>
+    <!-- treated tank -->
+    <rect x="240" y="70" width="90" height="180" fill="#12202b" stroke="#5b7a92"/>
+    <rect id="trtfill" x="241" y="110" width="88" height="139" fill="#2f9e7a"/>
+    <text x="285" y="60" text-anchor="middle" fill="#9fb3c6" font-size="11">TREATED LT-201</text>
+    <line x1="240" y1="200" x2="330" y2="200" stroke="#5b7a92" stroke-width="3" opacity="0"/>
+    <!-- distribution pump + header -->
+    <line x1="330" y1="200" x2="430" y2="200" stroke="#5b7a92" stroke-width="3"/>
+    <circle id="p-dist" cx="400" cy="200" r="14" fill="#3a3f45" stroke="#5b7a92"/>
+    <text x="400" y="230" text-anchor="middle" fill="#9fb3c6" font-size="10">P-401</text>
+    <line x1="430" y1="200" x2="500" y2="200" stroke="#5b7a92" stroke-width="3"/>
+    <circle cx="510" cy="200" r="20" fill="none" stroke="#5b7a92"/>
+    <text id="psi" x="510" y="204" text-anchor="middle" fill="#e8f0f7" font-size="12">--</text>
+    <text x="510" y="240" text-anchor="middle" fill="#9fb3c6" font-size="10">PT-401</text>
+  </svg>
+
+  <div class="card">
+    <h2>Process values</h2>
+    <div class="row">Raw tank <b id="v-raw">--</b></div>
+    <div class="row">Treated tank <b id="v-trt">--</b></div>
+    <div class="row">Chlorine <b id="v-cl">--</b></div>
+    <div class="row">Header <b id="v-psi">--</b></div>
+    <div class="row">Flow <b id="v-flow">--</b></div>
+    <div class="row">CPU <b id="v-cpu">--</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Alarms</h2>
+    <div class="row">Level low <b id="a-ll">--</b></div>
+    <div class="row">Level high <b id="a-lh">--</b></div>
+    <div class="row">Pressure low <b id="a-pl">--</b></div>
+    <div class="row">Overdose <b id="a-od">--</b></div>
+    <div class="row">Comms <b id="a-cf">--</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Controls</h2>
+    <div class="row">Intake pump
+      <span><button onclick="pump('intake',1)">start</button>
+      <button onclick="pump('intake',0)">stop</button></span></div>
+    <div class="row">Dist. pump
+      <span><button onclick="pump('distribution',1)">start</button>
+      <button onclick="pump('distribution',0)">stop</button></span></div>
+    <div class="row">Dose setpoint
+      <span><input id="sp-cl" type="number" step="0.1" value="2.5">
+      <button onclick="doseSp()">set</button></span></div>
+    <div class="row">Header target
+      <span><input id="sp-psi" type="number" value="60">
+      <button onclick="pressSp()">set</button></span></div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+function bit(el, v, invert){ el.textContent = v ? "ALARM" : "normal";
+  el.className = (v ^ !!invert) ? "alarm" : "ok"; }
+async function tick(){
+  let r; try { r = await (await fetch('/api/state')).json(); } catch(e){ return; }
+  if(r.error) return;
+  $('v-raw').textContent = r.pv.raw_level_pct + ' %';
+  $('v-trt').textContent = r.pv.treated_level_pct + ' %';
+  $('v-cl').textContent  = r.pv.chlorine_ppm + ' ppm  (sp ' + r.sp.dose_ppm + ')';
+  $('v-psi').textContent = r.pv.header_psi + ' psi  (tgt ' + r.sp.press_target + ')';
+  $('v-flow').textContent = r.pv.flow_gpm + ' gpm';
+  $('v-cpu').textContent = r.cpu_run ? 'RUN' : 'STOP';
+  $('v-cpu').className = r.cpu_run ? 'ok' : 'alarm';
+  bit($('a-ll'), r.alarms.level_low); bit($('a-lh'), r.alarms.level_high);
+  bit($('a-pl'), r.alarms.press_low); bit($('a-od'), r.alarms.overdose);
+  bit($('a-cf'), r.alarms.comms_fault);
+  $('overdose').style.display = r.alarms.overdose ? 'block' : 'none';
+  $('rawfill').setAttribute('y', 250 - r.pv.raw_level_pct*1.8);
+  $('rawfill').setAttribute('height', Math.max(0, r.pv.raw_level_pct*1.8));
+  $('trtfill').setAttribute('y', 250 - r.pv.treated_level_pct*1.8);
+  $('trtfill').setAttribute('height', Math.max(0, r.pv.treated_level_pct*1.8));
+  $('psi').textContent = Math.round(r.pv.header_psi);
+  const col = on => on ? '#2e7d68' : '#3a3f45';
+  $('p-intake').setAttribute('fill', col(r.pumps.intake));
+  $('p-dist').setAttribute('fill', col(r.pumps.distribution));
+  $('p-dose').setAttribute('fill', col(r.pumps.dosing));
+}
+async function cmd(body){ await fetch('/api/cmd',{method:'POST',
+  headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); tick(); }
+const pump = (which,on) => cmd({action:'pump',which,on});
+const doseSp = () => cmd({action:'dose_setpoint',ppm:$('sp-cl').value});
+const pressSp = () => cmd({action:'press_target',psi:$('sp-psi').value});
+tick(); setInterval(tick, 1500);
+</script>

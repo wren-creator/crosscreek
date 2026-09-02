@@ -44,8 +44,8 @@ the attacker box has no default route.
 ./setup.sh
 
 # bring the range up with vulnerable defaults (the attack half)
-#   water HMI       http://127.0.0.1:8081/
-#   power HMI       http://127.0.0.1:8082/
+#   water HMI       http://127.0.0.1:8071/
+#   power HMI       http://127.0.0.1:8072/
 #   water PLC       127.0.0.1:5020   Modbus/TCP
 #   dosing PLC      127.0.0.1:4840   EtherNet/IP (CIP)
 #   substation RTU  127.0.0.1:1020   S7comm
@@ -97,9 +97,9 @@ docker exec -it crosscreek-attacker bash
 
 | Service | Host bind | Purpose |
 |---|---|---|
-| water HMI | `127.0.0.1:8081` | water plant operator screen |
-| power HMI | `127.0.0.1:8082` | substation operator screen |
-| water PLC (OpenPLC UI) | `127.0.0.1:8091` | runtime web UI, used for the logic-download exercise |
+| water HMI | `127.0.0.1:8071` | water plant operator screen |
+| power HMI | `127.0.0.1:8072` | substation operator screen |
+| water PLC (OpenPLC UI) | `127.0.0.1:8073` | runtime web UI, used for the logic-download exercise |
 | water PLC (Modbus) | `127.0.0.1:5020` | Modbus/TCP, container port 502 |
 | dosing PLC (CIP) | `127.0.0.1:4840` | EtherNet/IP, container port 44818 |
 | substation RTU (S7) | `127.0.0.1:1020` | S7comm, container port 102 |

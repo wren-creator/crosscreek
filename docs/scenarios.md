@@ -22,7 +22,7 @@ Every entry uses this shape:
 ## Group A, exposure and access
 
 ### 1. Internet-exposed HMI with default credentials
-**Where:** `hmi-water`, reachable from `edge-net` via the flat firewall, `:8081`
+**Where:** `hmi-water`, reachable from `edge-net` via the flat firewall, `:8071`
 **Real-world parallel:** Municipal Water Authority of Aliquippa, PA, November 2023 (CyberAv3ngers / Unitronics Vision PLCs, TCP 20256, default password `1111`)
 **Vulnerability:** _TBD_
 **MITRE ATT&CK for ICS:** T0883 (Internet Accessible Device), T0812 (Default Credentials)
@@ -80,7 +80,7 @@ _rest TBD_
 ## Group D, impact and persistence
 
 ### 9. Modified ladder logic holds the intake pump on
-**Where:** `plc-water` OpenPLC runtime UI `:8091`
+**Where:** `plc-water` OpenPLC runtime UI `:8073`
 **MITRE ATT&CK for ICS:** T0889 (Modify Program), T0831 (Manipulation of Control)
 _rest TBD_
 
