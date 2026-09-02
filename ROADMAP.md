@@ -4,7 +4,7 @@
 
 - [x] Repo scaffold, lifecycle scripts, flat + segmented compose topologies
 - [x] Process core: `process-sim` + `plc-water` (OpenPLC / Modbus) + `hmi-water`
-- [ ] Vendor PLCs: `plc-dosing` (CIP) and `plc-power` (S7) + `hmi-power`
+- [~] Vendor PLCs: `plc-power` (S7) + `hmi-power` done; `plc-dosing` (CIP) next
 - [ ] Network boundary: `router-fw` flat ruleset, the six bridges
 - [ ] Attacker box + the Session 2-4 attack scripts
 - [ ] Defended half: segmented ruleset, controller hardening, `ids`, one-way historian

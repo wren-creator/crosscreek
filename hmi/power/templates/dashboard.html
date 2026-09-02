@@ -1,0 +1,106 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Cross Creek Substation &mdash; Single Line</title>
+<style>
+  body{background:#141a26;color:#dfe4ef;font-family:"Segoe UI",system-ui,sans-serif;margin:0}
+  header{background:#0f131d;padding:.6em 1.2em;display:flex;justify-content:space-between;
+         align-items:center;border-bottom:2px solid #8a6d2f}
+  header h1{font-size:1em;letter-spacing:.1em;text-transform:uppercase;color:#e0b96b;margin:0}
+  header a{color:#a9b2c6;font-size:.8em;text-decoration:none}
+  #alarm{display:none;background:#b00020;color:#fff;text-align:center;padding:.5em;
+         font-weight:700;letter-spacing:.12em}
+  .wrap{display:flex;gap:1.4em;padding:1.4em;flex-wrap:wrap}
+  svg{background:#0f131d;border:1px solid #2a3346;border-radius:6px}
+  .card{background:#1d2534;border:1px solid #2a3346;border-radius:6px;padding:1em 1.2em;min-width:230px}
+  .card h2{font-size:.78em;letter-spacing:.08em;text-transform:uppercase;color:#a9b2c6;margin:.1em 0 .8em}
+  .row{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;margin:.3em 0}
+  .row b{color:#eef1f7}
+  button{background:#2b3550;border:1px solid #3d4763;color:#dfe4ef;padding:.35em .7em;
+         border-radius:3px;cursor:pointer;font-size:.8em}
+  button:hover{background:#8a6d2f}
+  .alarm{color:#ff8a80}.ok{color:#7fd4c1}
+</style>
+<header>
+  <h1>Cross Creek Substation &mdash; Single Line</h1>
+  <span>{{ user }} &nbsp;|&nbsp; <a href="/logout">sign out</a></span>
+</header>
+<div id="alarm">&#9888; FREQUENCY EXCURSION</div>
+<div class="wrap">
+  <svg id="sld" width="420" height="360" viewBox="0 0 420 360">
+    <text x="210" y="30" text-anchor="middle" fill="#a9b2c6" font-size="11">138 kV GRID SOURCE</text>
+    <line x1="210" y1="36" x2="210" y2="70" stroke="#6b7794" stroke-width="3"/>
+    <!-- feeder breaker -->
+    <rect id="b-feeder" x="196" y="70" width="28" height="28" fill="#3a3f45" stroke="#6b7794"/>
+    <text x="250" y="88" fill="#a9b2c6" font-size="10">52-F  feeder</text>
+    <line x1="210" y1="98" x2="210" y2="140" stroke="#6b7794" stroke-width="3"/>
+    <!-- bus -->
+    <line x1="90" y1="140" x2="330" y2="140" stroke="#8fa0c0" stroke-width="5"/>
+    <text x="90" y="132" fill="#a9b2c6" font-size="10">BUS A</text>
+    <!-- bus tie -->
+    <rect id="b-tie" x="300" y="150" width="24" height="24" fill="#3a3f45" stroke="#6b7794"/>
+    <text x="300" y="192" fill="#a9b2c6" font-size="10">52-T</text>
+    <!-- load breaker -->
+    <line x1="150" y1="140" x2="150" y2="180" stroke="#6b7794" stroke-width="3"/>
+    <rect id="b-load" x="136" y="180" width="28" height="28" fill="#3a3f45" stroke="#6b7794"/>
+    <text x="176" y="198" fill="#a9b2c6" font-size="10">52-L  load</text>
+    <line x1="150" y1="208" x2="150" y2="250" stroke="#6b7794" stroke-width="3"/>
+    <circle cx="150" cy="270" r="18" fill="none" stroke="#6b7794"/>
+    <text x="150" y="274" text-anchor="middle" fill="#eef1f7" font-size="10" id="loadmw">--</text>
+    <text x="150" y="308" text-anchor="middle" fill="#a9b2c6" font-size="10">FEEDER 1</text>
+    <!-- freq readout -->
+    <text x="210" y="340" text-anchor="middle" fill="#e0b96b" font-size="16" id="freq">-- Hz</text>
+  </svg>
+
+  <div class="card">
+    <h2>Bus values</h2>
+    <div class="row">Frequency <b id="v-freq">--</b></div>
+    <div class="row">Voltage <b id="v-volt">--</b></div>
+    <div class="row">Load <b id="v-load">--</b></div>
+    <div class="row">RTU CPU <b id="v-cpu">--</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Breakers</h2>
+    <div class="row">52-F feeder <b id="s-feeder">--</b></div>
+    <div class="row">52-T bus tie <b id="s-tie">--</b></div>
+    <div class="row">52-L load <b id="s-load">--</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Control</h2>
+    <div class="row">52-F <span><button onclick="brk('feeder',1)">close</button>
+      <button onclick="brk('feeder',0)">trip</button></span></div>
+    <div class="row">52-T <span><button onclick="brk('bus_tie',1)">close</button>
+      <button onclick="brk('bus_tie',0)">trip</button></span></div>
+    <div class="row">52-L <span><button onclick="brk('load',1)">close</button>
+      <button onclick="brk('load',0)">trip</button></span></div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+function sw(el, closed){ el.setAttribute('fill', closed ? '#2e7d68' : '#b00020'); }
+function txt(el, closed){ el.textContent = closed ? 'CLOSED' : 'OPEN';
+  el.className = closed ? 'ok' : 'alarm'; }
+async function tick(){
+  let r; try { r = await (await fetch('/api/state')).json(); } catch(e){ return; }
+  if(r.error) return;
+  $('v-freq').textContent = r.pv.freq_hz.toFixed(3) + ' Hz';
+  $('v-volt').textContent = r.pv.voltage_kv + ' kV';
+  $('v-load').textContent = r.pv.load_mw + ' MW';
+  $('v-cpu').textContent = r.cpu_mode;
+  $('v-cpu').className = r.cpu_mode === 'RUN' ? 'ok' : 'alarm';
+  $('freq').textContent = r.pv.freq_hz.toFixed(2) + ' Hz';
+  $('loadmw').textContent = r.pv.load_mw + ' MW';
+  sw($('b-feeder'), r.breakers.feeder); sw($('b-tie'), r.breakers.bus_tie);
+  sw($('b-load'), r.breakers.load);
+  txt($('s-feeder'), r.breakers.feeder); txt($('s-tie'), r.breakers.bus_tie);
+  txt($('s-load'), r.breakers.load);
+  const off = Math.abs(r.pv.freq_hz - 50.0) > 0.5;
+  $('alarm').style.display = off ? 'block' : 'none';
+  $('freq').setAttribute('fill', off ? '#ff8a80' : '#e0b96b');
+}
+async function brk(breaker, close){ await fetch('/api/cmd',{method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({breaker,close})}); setTimeout(tick, 300); }
+tick(); setInterval(tick, 1500);
+</script>

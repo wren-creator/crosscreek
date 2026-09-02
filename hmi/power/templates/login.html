@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Cross Creek Substation &mdash; Operator Login</title>
+<style>
+  body{background:#1b2231;color:#dfe4ef;font-family:"Segoe UI",system-ui,sans-serif;
+       display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+  .panel{background:#252d40;border:1px solid #3d4763;border-radius:6px;padding:2em 2.4em;width:320px}
+  h1{font-size:1.1em;letter-spacing:.08em;text-transform:uppercase;color:#e0b96b;margin:.2em 0 1.2em}
+  label{display:block;font-size:.8em;margin:.9em 0 .25em;color:#a9b2c6}
+  input{width:100%;padding:.5em;background:#1b2231;border:1px solid #3d4763;color:#eef1f7;border-radius:3px}
+  button{margin-top:1.4em;width:100%;padding:.6em;background:#8a6d2f;border:0;color:#fff;
+         font-weight:600;letter-spacing:.05em;border-radius:3px;cursor:pointer}
+  .err{color:#ff8a80;font-size:.85em;margin-top:1em}
+  .hint{color:#7a839c;font-size:.75em;margin-top:1.4em;border-top:1px dashed #3d4763;padding-top:.8em}
+</style>
+<form class="panel" method="post">
+  <h1>Cross Creek Substation</h1>
+  <label>Operator ID</label>
+  <input name="username" autofocus autocomplete="off">
+  <label>Password</label>
+  <input name="password" type="password">
+  <button>Sign in</button>
+  {% if err %}<div class="err">{{ err }}</div>{% endif %}
+  {% if hint %}<div class="hint">Factory default account is still active.</div>{% endif %}
+</form>

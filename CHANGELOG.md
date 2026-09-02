@@ -6,6 +6,23 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Added
+- Substation vertical: `plc-power` + `hmi-power`, wired into `process-sim`.
+  - `plc/power-s7/`: a python-snap7 server on :102 exposing DB1 (bus frequency,
+    voltage, load, breaker status/command, CPU mode). Real S7 stop-CPU lands as
+    a virtual-CPU STOP; `S7_NO_PASSWORD=0` makes the scan loop force RUN back
+    and ignore unauthenticated breaker-open commands.
+  - `process-sim/model_power.py`: grid-tied vs islanded bus model. Open the
+    feeder breaker and the bus islands; the generation/load imbalance then
+    ramps the frequency past the excursion alarm.
+  - `hmi/power/`: single-line-diagram HMI, breaker close/trip controls writing
+    the S7 command byte.
+  - Verified: `plc_stop()` over S7comm stops the RTU; a DB write to the command
+    byte trips the load breaker (voltage rises, load sheds); islanding drives a
+    watchable over-frequency excursion.
+  - snap7's C client needs an IP, so `process-sim` and `hmi-power` resolve the
+    PLC hostname before connecting.
+
+### Added
 - Process core: the water plant runs end to end.
   - `plc/water-openplc/`: a soft PLC serving real Modbus/TCP on :502, an
     OpenPLC-style 200 ms scan loop over a swappable `control(io)` program, and
