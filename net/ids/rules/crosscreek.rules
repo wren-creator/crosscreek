@@ -1,0 +1,19 @@
+# Cross Creek IDS rules. Deliberately small and readable: the teaching point is
+# that a handful of rules catch the whole attack set, because legitimate OT
+# traffic is narrow and predictable.
+#
+# OT PLC segment: 172.30.40.20 (Modbus), .21 (EtherNet/IP), .22 (S7comm)
+# Sanctioned initiators: HMIs 172.30.40.10-.11, historian 172.30.30.30,
+# jump host 172.30.40.40, process-sim on the field bus 172.30.50.0/24.
+
+# --- reach attempts from the edge / internet ---------------------------
+alert ip 172.30.10.0/24 any -> 172.30.40.0/24 [502,102,44818] (msg:"CC ICS: edge host reaching a PLC protocol port"; sid:2100001; rev:1;)
+
+# --- ICS protocol spoken by a host that is not an HMI, historian or sim --
+alert tcp ![172.30.40.10,172.30.40.11,172.30.30.30,172.30.40.40,172.30.50.0/24] any -> 172.30.40.20 502 (msg:"CC ICS: Modbus to water PLC from an unexpected source"; flow:to_server; sid:2100010; rev:1;)
+alert tcp ![172.30.40.11,172.30.30.30,172.30.40.40] any -> 172.30.40.22 102 (msg:"CC ICS: S7comm to substation RTU from an unexpected source"; flow:to_server; sid:2100011; rev:1;)
+alert tcp ![172.30.40.10,172.30.30.30,172.30.40.40,172.30.50.0/24] any -> 172.30.40.21 44818 (msg:"CC ICS: EtherNet/IP to dosing controller from an unexpected source"; flow:to_server; sid:2100012; rev:1;)
+
+# --- the two program-download paths --------------------------------
+alert http any any -> 172.30.40.21 8080 (msg:"CC ICS: POST to the dosing controller logic-update endpoint"; flow:to_server,established; http.method; content:"POST"; sid:2100030; rev:1;)
+alert http any any -> 172.30.40.20 8080 (msg:"CC ICS: program upload to the water PLC runtime"; flow:to_server,established; http.uri; content:"/upload-program"; sid:2100031; rev:1;)

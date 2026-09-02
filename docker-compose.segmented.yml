@@ -13,6 +13,8 @@ services:
   router-fw:
     environment:
       FW_MODE: "0"                       # enforce zones + conduits
+    ports:
+      - "127.0.0.1:9411:9411"           # IDS EVE tail (ids shares this namespace)
 
   plc-water:
     environment:
@@ -57,10 +59,8 @@ services:
       router-fw: { condition: service_healthy }
     volumes:
       - ids-logs:/var/log/suricata
-    ports:
-      - "127.0.0.1:9411:9411"            # tiny EVE-json tail viewer
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -x suricata >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f Suricata-Main >/dev/null || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 6

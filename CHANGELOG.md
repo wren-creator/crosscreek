@@ -6,6 +6,15 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Added
+- IDS (`net/ids/`): Suricata 8 (community image; the package was dropped from
+  Debian 12) sharing the firewall's network namespace, so it sees every
+  segment. Six Cross Creek rules flag edge hosts reaching a PLC port, ICS
+  protocols spoken by a non-HMI source, and the two program-download paths. A
+  `:9411` text endpoint tails the alerts. Verified in segmented mode: the
+  attacker's Modbus/S7/CIP attempts time out at the firewall (240+ packets on
+  the CC-FW-DROP counter) and each attempt raises an alert.
+
+### Added
 - Network boundary and the attacker workstation: the flat range is now
   attackable end to end from a contained box.
   - `net/router-fw/`: a Debian + nftables container bridging edge, IT, DMZ and
