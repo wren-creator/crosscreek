@@ -1,0 +1,41 @@
+# Cross Creek 101 CTF — tasks
+
+Flags 1–6 are on the flat range (`./start.sh`). Flags 7–8 need the segmented
+range (`./start.sh --segmented`). Work from the attacker box unless told
+otherwise: `docker exec -it crosscreek-attacker bash`.
+
+## flag1 — the open door
+Log into the water HMI. What password worked for the `admin` account?
+
+## flag2 — the loot file
+Read the file the engineering workstation shares that lists the controller
+credentials. What is its filename (just the name, not the path)?
+
+## flag3 — the frozen residual
+Run the Modbus chlorine overdose. The golden PLC program stops the residual
+climbing at a ceiling. What is that ceiling, in ppm, to one decimal place?
+(Hint: it is a discrete-input alarm and a constant in the program.)
+
+## flag4 — the patched program
+Run `push_logic_water.py`. Open the water PLC runtime console and read the name
+of the program that is now running. Give it exactly.
+
+## flag5 — the revision counter
+Run the CIP logic push against the dosing controller. Run `cip_attack.py read`
+afterward. What integer does `LogicRev` show?
+
+## flag6 — the islanded frequency
+On the flat range, trip the feeder breaker and the load breaker on the
+substation. Watch the power HMI. The frequency ramps until it is clamped. What
+value, in Hz, does it settle at? (Whole number.)
+
+## flag7 — the wall (segmented)
+On the segmented range, run `recon.py sweep` from the attacker box, then read
+the firewall drop counter:
+`docker exec crosscreek-router-fw nft list ruleset | grep CC-FW-DROP`
+Is the counter zero or non-zero? Answer `zero` or `nonzero`.
+
+## flag8 — the alert (segmented)
+On the segmented range, run any Session 3 or 4 attack from the attacker box,
+then `curl -s http://127.0.0.1:9411/`. Copy the bracketed signature text of the
+first alert line, exactly as shown between the square brackets.

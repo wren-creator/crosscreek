@@ -6,6 +6,15 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Added
+- Instructor kit (`instructor/`): a timed two-day agenda, a setup runbook
+  (host requirements, an offline-image fallback, a common-failures table,
+  reset-between-cohorts), a capstone grading rubric, an answer key with the
+  per-session teaching emphasis and the one thing students get wrong, seven
+  slide-outline decks, and a capstone CTF whose eight flags are values you can
+  only get by running the range (`check-flags.sh` scores a submission against
+  `answers.txt`; verified 8/8 against the live range).
+
+### Added
 - *Cross Creek 101* EPUB (`docs/Cross-Creek-101-Syllabus.epub`, source under
   `docs/syllabus-epub/`): front matter with the range bring-up and the
   authorised-use notice, seven session chapters (orientation and the Purdue

@@ -1,6 +1,6 @@
 # Cross Creek roadmap
 
-## v1 (in progress)
+## v1
 
 - [x] Repo scaffold, lifecycle scripts, flat + segmented compose topologies
 - [x] Process core: `process-sim` + `plc-water` (OpenPLC / Modbus) + `hmi-water`
@@ -10,7 +10,7 @@
 - [x] Defended half: segmented ruleset, controller hardening, `ids` (Suricata), verified block + alert
 - [x] `docs/architecture.md`, `docs/scenarios.md` + trainee copy, `docs/verification.md`
 - [x] *Cross Creek 101* EPUB, seven sessions + bookends, builds clean
-- [ ] Instructor kit: agenda, setup runbook, rubric, slide outlines, capstone CTF
+- [x] Instructor kit: agenda, setup runbook, rubric, answer key, 7 slide decks, capstone CTF
 
 ## v2 and beyond
 
