@@ -3,144 +3,92 @@
 All notable changes to Cross Creek are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.1.0] - 2026-09-02
 
-### Added
-- Instructor kit (`instructor/`): a timed two-day agenda, a setup runbook
-  (host requirements, an offline-image fallback, a common-failures table,
-  reset-between-cohorts), a capstone grading rubric, an answer key with the
-  per-session teaching emphasis and the one thing students get wrong, seven
-  slide-outline decks, and a capstone CTF whose eight flags are values you can
-  only get by running the range (`check-flags.sh` scores a submission against
-  `answers.txt`; verified 8/8 against the live range).
+First working release. The range runs both halves end to end.
 
-### Added
-- *Cross Creek 101* EPUB (`docs/Cross-Creek-101-Syllabus.epub`, source under
-  `docs/syllabus-epub/`): front matter with the range bring-up and the
-  authorised-use notice, seven session chapters (orientation and the Purdue
-  model; exposure and access; Modbus; vendor dialects; segmentation and
-  hardening; monitoring and recovery; capstone and IR tabletop), and the
-  About the Author / closing bookend. Same structure and build script as the
-  Mainframe 100 series and Widgetorium; teal accent. Builds clean, mimetype
-  stored first, all XHTML well-formed. Cover generated for the range.
+### The range
 
-### Added
-- Documentation filled in: `docs/scenarios.md` (all ten entries with the exact
-  attacker command, the physical consequence observed in the sim, and the fix
-  mapped to a CISA CPG and an ISA/IEC 62443 clause), `docs/scenarios-trainee.md`
-  generated from it with the fix removed, `docs/verification.md` Sections A-E
-  with per-scenario rows, and `docs/architecture.md` completed (segment map,
-  the flat-vs-segmented firewall, the IDS placement, and the three mechanics
-  worth explaining).
+- **Scaffold and lifecycle.** `setup.sh`, `start.sh`, `stop.sh`, `status.sh`,
+  `reset.sh` with the loopback-only guard in `lib.sh` and a containment probe
+  in `status.sh` that confirms the attacker box cannot reach a public address.
+- **Flat topology** (`docker-compose.yml`): five bridge networks along the
+  Purdue model (edge, IT, DMZ, a single flat OT segment, an internal field
+  bus), every published port on `127.0.0.1`, the field bus `internal`.
+- **Defended topology** (`docker-compose.segmented.yml`): zones and conduits,
+  every weakness toggle safe, the IDS and a DMZ jump host added. Applied by
+  `./start.sh --segmented`.
+- **`.env.example`**: the deliberate-weakness toggles with vulnerable defaults.
 
-### Added
-- IDS (`net/ids/`): Suricata 8 (community image; the package was dropped from
-  Debian 12) sharing the firewall's network namespace, so it sees every
-  segment. Six Cross Creek rules flag edge hosts reaching a PLC port, ICS
-  protocols spoken by a non-HMI source, and the two program-download paths. A
-  `:9411` text endpoint tails the alerts. Verified in segmented mode: the
-  attacker's Modbus/S7/CIP attempts time out at the firewall (240+ packets on
-  the CC-FW-DROP counter) and each attempt raises an alert.
+### Controllers, process, HMIs
 
-### Added
-- Network boundary and the attacker workstation: the flat range is now
-  attackable end to end from a contained box.
-  - `net/router-fw/`: a Debian + nftables container bridging edge, IT, DMZ and
-    OT. `FLAT` forwards everything and masquerades so the attacker's replies
-    return; `SEGMENTED` is default-drop with only the IT<->DMZ, jump-host->OT
-    and historian->OT conduits open, every denied cross-zone packet logged.
-  - `attacker/`: python:slim + nmap and the open-source protocol libraries.
-    Its entrypoint routes to the range only through the firewall and
-    blackholes any default route. Scripts (`recon`, `modbus_attack`,
-    `s7_attack`, `cip_attack`, `push_logic_water`) are hardcoded to lab
-    addresses and cover scenarios 1-9.
-  - `eng-ws/`: serves the PLC project files and a `notes.txt` with every
-    controller address and password, plus an unauthenticated remote-desktop
-    port when `EXPOSE_REMOTE_ACCESS=1`.
-  - `historian/`: polls the water PLC (Modbus) and RTU (S7) into sqlite;
-    `HISTORIAN_READONLY` gates the write-back path.
-  - The OT network is now a single flat segment (as small utilities really
-    are); the Session 5 lesson is segmenting it. `edge-net` is no longer
-    `internal` (that blocked routing through the firewall); containment is a
-    no-egress attacker plus a `status.sh` reachability probe.
-  - Verified: from the attacker box, `recon.py sweep` maps all five OT
-    devices, `admin/admin` opens both HMIs, `notes.txt` yields the
-    credentials, and the Modbus/S7/CIP/logic attacks all land with visible
-    effects on the HMIs. `./status.sh` confirms the box has no internet.
+- **`plc-water`**: a soft PLC on real Modbus/TCP :502, an OpenPLC-style 200 ms
+  scan loop over a swappable `control(io)` program, and a runtime web UI on
+  :8073 with a program-upload path (scenario 9, a documented vendor-download
+  stand-in). `MODBUS_WRITE_OPEN` drives command validation and the keyswitch.
+- **`plc-power`**: a `python-snap7` S7comm server on :102 exposing DB1 (bus
+  frequency, voltage, load, breaker status/command, CPU mode). Real S7
+  stop-CPU lands as a virtual-CPU STOP; `S7_NO_PASSWORD=0` re-asserts RUN and
+  rejects unauthenticated breaker-open.
+- **`plc-dosing`**: an embedded cpppo EtherNet/IP simulator on :44818 plus a
+  Flask logic-update stand-in on :8080 that pins the metering pump wide open
+  and bypasses the overdose interlock when `ENIP_ALLOW_LOGIC_DOWNLOAD=1`.
+- **`process-sim`**: lumped models of the water plant and the substation bus.
+  Reads actuator state over Modbus / S7 / CIP, advances the physics, writes
+  sensor values back. Coarse on purpose.
+- **`hmi-water`** and **`hmi-power`**: Flask + inline-SVG operator screens (a
+  P&ID and a single-line diagram) that poll the PLCs and post commands.
+  `DEFAULT_CREDS` gates `admin/admin`; `VERBOSE_HMI_ERRORS` leaks the tag map.
 
-### Added
-- Dosing controller: `plc-dosing`, wired into `process-sim` over CIP.
-  - `plc/dosing-enip/`: an embedded cpppo EtherNet/IP simulator on :44818
-    carrying `DoseSetpoint`, `DoseRate`, `FlowFeedback`, `Mode`, `LogicRev`,
-    `LogicForced`. A Flask service on :8080 is the unauthenticated
-    logic-update stand-in; POST while `ENIP_ALLOW_LOGIC_DOWNLOAD=1` forces the
-    metering pump to 100% and bypasses the downstream overdose interlock.
-  - `process-sim` gains a CIP loop: reads `DoseRate`/`LogicForced`, writes
-    `FlowFeedback`, and feeds an effective dose target into the water model.
-    `model_water.step()` now takes `dosing_active` + `dose_target_ppm` so
-    Modbus setpoint tamper, CIP rate tamper, and a CIP logic push all read as
-    chlorine.
-  - Verified: a CIP write to `DoseSetpoint` drives the residual into the
-    interlock; a logic push runs it to ~20 ppm with the interlock powerless.
+### Boundary, supporting hosts, IDS
 
-### Added
-- Substation vertical: `plc-power` + `hmi-power`, wired into `process-sim`.
-  - `plc/power-s7/`: a python-snap7 server on :102 exposing DB1 (bus frequency,
-    voltage, load, breaker status/command, CPU mode). Real S7 stop-CPU lands as
-    a virtual-CPU STOP; `S7_NO_PASSWORD=0` makes the scan loop force RUN back
-    and ignore unauthenticated breaker-open commands.
-  - `process-sim/model_power.py`: grid-tied vs islanded bus model. Open the
-    feeder breaker and the bus islands; the generation/load imbalance then
-    ramps the frequency past the excursion alarm.
-  - `hmi/power/`: single-line-diagram HMI, breaker close/trip controls writing
-    the S7 command byte.
-  - Verified: `plc_stop()` over S7comm stops the RTU; a DB write to the command
-    byte trips the load breaker (voltage rises, load sheds); islanding drives a
-    watchable over-frequency excursion.
-  - snap7's C client needs an IP, so `process-sim` and `hmi-power` resolve the
-    PLC hostname before connecting.
+- **`net/router-fw`**: Debian + nftables. Flat forwards everything and
+  masquerades; segmented is default-drop with three conduits (IT↔DMZ, jump
+  host→OT, historian→OT) and logs every denied cross-zone packet.
+- **`attacker`**: python:slim with nmap and the open-source protocol
+  libraries. No default route (blackholed); routes to the range only through
+  the firewall. Scripts under `/opt/scripts` (`recon`, `modbus_attack`,
+  `s7_attack`, `cip_attack`, `push_logic_water`) cover scenarios 1-9,
+  hardcoded to lab addresses.
+- **`eng-ws`**: serves the PLC project files and a `notes.txt` with every
+  controller credential, plus an unauthenticated remote-desktop port when
+  `EXPOSE_REMOTE_ACCESS=1`.
+- **`historian`**: polls the water PLC and the RTU into sqlite;
+  `HISTORIAN_READONLY` gates the write-back path.
+- **`net/ids`**: Suricata 8 (community image; the package was dropped from
+  Debian 12) sharing the firewall's namespace. Six rules; a `:9411` text tail.
 
-### Added
-- Process core: the water plant runs end to end.
-  - `plc/water-openplc/`: a soft PLC serving real Modbus/TCP on :502, an
-    OpenPLC-style 200 ms scan loop over a swappable `control(io)` program, and
-    a runtime web UI on :8073 (view program, stop/start CPU, upload program).
-    The upload path is scenario 9 and is a documented stand-in for a vendor
-    download. `MODBUS_WRITE_OPEN` toggles command validation and the keyswitch.
-  - `process-sim/`: a lumped physical model (raw tank, clearwell, chlorine
-    residual, header pressure) that reads the PLC's actuator coils over Modbus
-    and writes sensor values back every tick.
-  - `hmi/water/`: Flask + inline-SVG P&ID; browser polls `/api/state`, controls
-    POST to `/api/cmd`. `DEFAULT_CREDS` gates `admin/admin`; `VERBOSE_HMI_ERRORS`
-    leaks tracebacks and the tag map.
-  - Verified against the running stack: a Modbus register write drives chlorine
-    past the overdose threshold; a logic upload with the interlock removed holds
-    the intake pump on and overflows the raw tank.
-- Host HMI/UI ports moved off 8081-8091 (collision with a local service) to
-  8071 (water HMI), 8072 (power HMI), 8073 (water PLC runtime UI).
+### Documentation and course
 
-### Added (scaffold)
-- Repo scaffold: lifecycle scripts (`setup.sh`, `start.sh`, `stop.sh`,
-  `status.sh`, `reset.sh`) with the loopback-only guard in `lib.sh` and an
-  attacker-containment check in `status.sh`.
-- `docker-compose.yml` flat topology: six network segments mapped to the Purdue
-  model (edge, enterprise, DMZ, OT-HMI, OT-PLC, field), all host ports bound to
-  `127.0.0.1`, edge and field networks `internal`.
-- `docker-compose.segmented.yml` override for the defended topology: zones and
-  conduits, weakness toggles off, IDS on, one-way historian, DMZ jump host.
-- `.env.example` weakness toggles with vulnerable defaults.
-- Documentation stubs: `docs/architecture.md`, `docs/scenarios.md`,
-  `docs/scenarios-trainee.md`, `docs/verification.md`.
-- `ROADMAP.md`.
+- **`docs/scenarios.md`** and **`-trainee.md`**: all ten planted weaknesses in
+  the fixed shape, each with the real incident, the exact command, the
+  physical consequence observed against the running range, and a fix mapped to
+  a CISA CPG and an ISA/IEC 62443 clause. Framework-mapping table.
+- **`docs/verification.md`**: Sections A-E, one row per scenario for the attack
+  side and the defended re-run.
+- **`docs/architecture.md`**: segment map, the flat-vs-segmented firewall, the
+  IDS placement, and the three mechanics worth spelling out.
+- **`docs/Cross-Creek-101-Syllabus.epub`**: a seven-session course (source
+  under `docs/syllabus-epub/`), same structure as the Mainframe 100 series.
+- **`instructor/`**: a timed agenda, a setup runbook, a grading rubric, an
+  answer key, seven slide decks, and an eight-flag capstone CTF with
+  `check-flags.sh`.
 
-### Not yet built
-- Service images (`plc/*`, `process-sim/`, `hmi/*`, `eng-ws/`, `historian/`,
-  `net/router-fw/`, `net/ids/`, `attacker/`) land in follow-up commits, one
-  vertical slice at a time per the build order in the plan.
-- *Cross Creek 101* EPUB and the instructor kit.
+### Verified
+
+- Flat: from the contained attacker box, `recon` maps all five OT devices,
+  `admin/admin` opens both HMIs, `notes.txt` yields the credentials, and the
+  Modbus / S7 / CIP / logic-push attacks all land with visible HMI effects
+  (chlorine past 15 ppm, header pressure collapsing, feeder breaker open,
+  frequency past 53 Hz, raw tank overflowing).
+- Segmented: the same attacks time out at the firewall (CC-FW-DROP counter
+  climbing), `recon` finds nothing, and each attempt raises a Suricata alert
+  at `http://127.0.0.1:9411/`.
+- `./status.sh` reports loopback-only and no attacker egress. The EPUB builds
+  clean. The CTF checker scores 8/8 against the live range.
 
 ## Project status
 
 Cross Creek is a training range, not a product. The scenario set, container
-layout, and default ports may change between revisions. Reset the range between
-cohorts, several scenarios are stateful.
+layout, and default ports may change between revisions. Reset the range
+between cohorts, several scenarios are stateful.
