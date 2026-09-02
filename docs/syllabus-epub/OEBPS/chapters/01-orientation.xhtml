@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>Session 1: Orientation and the Purdue Model</title>
+<link rel="stylesheet" type="text/css" href="../styles.css"/>
+</head>
+<body>
+<h1>Session 1: Orientation and the Purdue Model</h1>
+<p>Goal for this session: get the range running, understand the ethics of what you are about to do, and map the plant by hand, the way an assessor maps a client site on day one. You will identify every zone, every controller, and every protocol before you send a single hostile packet. Do not try to exploit anything yet.</p>
+
+<h2>1.1 The Line You Do Not Cross</h2>
+<p>Web application testing has a forgiving failure mode. You knock a container over, you restart it, you file a finding. Industrial control systems do not work that way. The output of the logic you are poking is a pump, a valve, a breaker, a chemical feed. A stopped CPU can mean a tank overflows into a river. A tampered setpoint can mean the water leaving the plant is not safe to drink. A breaker operated at the wrong moment can drop power to a hospital.</p>
+<p>So the rule for this course, and for the rest of your career, is simple. You run these techniques against equipment you own, or against a range built for the purpose, or against a client system under a signed rules-of-engagement document that a plant engineer has read and approved and is standing by to recover. Nothing else. Not "just a scan." Not "just reading, not writing," because on Modbus a read and a write are the same size and the same risk of confusing a device that has run for fifteen years without being spoken to by anything but its HMI.</p>
+<p>Cross Creek exists so you can build the instinct without the consequences. Use it that way.</p>
+
+<h2>1.2 Bring the Range Up and Prove It Is Contained</h2>
+<p>Before anything sharper than a browser, prove to yourself the range cannot reach past your machine.</p>
+<pre>./setup.sh
+./start.sh
+./status.sh
+</pre>
+<p><code>status.sh</code> checks three things: every published port is on <code>127.0.0.1</code>, the attacker container has no working route to the internet, and nothing is bound where it should not be. It exits non-zero if any of that fails. Run it now, read the output, and get in the habit. On a real engagement, proving your test traffic stayed in scope is the same reflex, and you build it here.</p>
+
+<h2>1.3 The Purdue Model, and Where Cross Creek Sits In It</h2>
+<p>The Purdue Enterprise Reference Architecture, the "Purdue model," is how the ICS world talks about network layers. You do not need to recite it, but you need to recognise it, because every defense decision in Sessions 5 to 7 is an argument about which layer something belongs on.</p>
+<table>
+<thead><tr><th>Level</th><th>What lives there</th><th>Cross Creek</th></tr></thead>
+<tbody>
+<tr><td>4 / 5</td><td>enterprise IT, business systems</td><td><code>it-net</code> 172.30.20.0/24</td></tr>
+<tr><td>3.5</td><td>the DMZ between IT and OT</td><td><code>dmz-net</code> 172.30.30.0/24</td></tr>
+<tr><td>3</td><td>operations management, engineering workstations, historians</td><td><code>eng-ws</code>, <code>historian</code></td></tr>
+<tr><td>2</td><td>supervisory control, HMIs</td><td><code>hmi-water</code>, <code>hmi-power</code> on <code>ot-net</code></td></tr>
+<tr><td>1</td><td>controllers, PLCs, RTUs</td><td><code>plc-water</code>, <code>plc-dosing</code>, <code>plc-power</code> on <code>ot-net</code></td></tr>
+<tr><td>0</td><td>the physical process, sensors and actuators</td><td><code>process-sim</code> on the internal <code>sim-net</code></td></tr>
+</tbody>
+</table>
+<p>Notice that in the default range, Levels 1 and 2 share one flat network, <code>ot-net</code>. That is not a mistake in the lab. That is how a large number of real small utilities are actually built, and undoing it is the core of Session 5.</p>
+
+<h2>1.4 Map the Plant by Hand</h2>
+<p>Open both HMIs and behave like an operator. On the water side, <code>http://127.0.0.1:8071</code>, log in <code>admin</code> / <code>admin</code> and watch the plant run: the raw tank cycling between its setpoints as the intake pump duty-cycles, the chlorine residual holding at 2.5 ppm, the header pressure sitting near 60 psi. On the power side, <code>http://127.0.0.1:8072</code>, the bus at 50 Hz with all three breakers closed.</p>
+<p>Now get on the attacker box and look at the network the way an intruder who just landed would.</p>
+<pre>docker exec -it crosscreek-attacker bash
+ip route                                   # note: no default route, only the lab
+python3 /opt/scripts/recon.py sweep        # TCP-connect scan of the OT /24
+</pre>
+<p>Write down, on paper, what answers and on what port:</p>
+<pre>172.30.40.10   8080/http            water HMI
+172.30.40.11   8080/http            power HMI
+172.30.40.20   502/modbus  8080/http   water PLC + its runtime console
+172.30.40.21   44818/enip  8080/http   dosing controller + a logic-update service
+172.30.40.22   102/s7comm          substation RTU
+172.30.20.20   8080/http  5900/vnc  engineering workstation
+</pre>
+<p>Three industrial protocols, two web HMIs, an engineering box one hop away, and a service on the dosing controller that answers HTTP on 8080 and should make you curious. That is your attack surface, and you built the map, not a tool.</p>
+
+<h2>1.5 What You Should Notice</h2>
+<p>You are on a network that was never meant to have a hostile host on it, and it shows. Nothing asked you for a credential to run that scan. Every device answered. The protocols you found, Modbus, EtherNet/IP, S7comm, were all specified before authentication on a control network was considered a requirement, and none of the three will challenge you when you start issuing commands in the next session. The plant's entire security model, right now, is that the bad guys are not supposed to be able to get here. Sessions 2 through 4 are what happens when that assumption fails. Sessions 5 through 7 are how you build a real one.</p>
+</body>
+</html>

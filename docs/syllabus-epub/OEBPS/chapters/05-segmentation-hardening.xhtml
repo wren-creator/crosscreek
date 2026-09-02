@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>Session 5: Now Secure It, Part One</title>
+<link rel="stylesheet" type="text/css" href="../styles.css"/>
+</head>
+<body>
+<h1>Session 5: Now Secure It, Part One</h1>
+<p>Goal for this session: turn the range around. Bring it up in the defended topology, understand what each control does, and re-run the Session 2 to 4 attacks to watch them fail. This session is segmentation, protocol allowlisting, and controller hardening: the first three of seven defensive modules.</p>
+
+<h2>5.1 Flip the Range</h2>
+<pre>./stop.sh
+./start.sh --segmented
+./status.sh
+</pre>
+<p>That folds in <code>docker-compose.segmented.yml</code>, which does several things at once. The boundary firewall goes into zones-and-conduits mode. Every deliberate weakness toggle flips to its safe value. An IDS container comes up. A DMZ jump host appears. The point of doing it all at once is that these controls reinforce each other; the point of this book is that you understand each one on its own.</p>
+
+<h2>5.2 Module D1: Segment the Network (Purdue, ISA/IEC 62443)</h2>
+<p>In the flat range the boundary firewall forwarded everything, so the attacker on the edge network could route straight to the PLCs. The segmented ruleset, <code>net/router-fw/nftables.segmented.conf</code>, is default-drop on the forward path. It permits exactly three conduits:</p>
+<table>
+<thead><tr><th>From</th><th>To</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>IT 172.30.20.0/24</td><td>DMZ 172.30.30.0/24</td><td>reach the historian UI, manage the jump host</td></tr>
+<tr><td>DMZ jump host .40</td><td>OT, ssh and http</td><td>sanctioned remote engineering</td></tr>
+<tr><td>DMZ historian .30</td><td>OT, the read ports</td><td>data collection</td></tr>
+</tbody>
+</table>
+<p>Everything else that crosses a zone boundary hits <code>log prefix "CC-FW-DROP " counter drop</code>. The edge network, where the attacker lives, has no conduit at all. In ISA/IEC 62443 language you have defined zones and the conduits between them, and denied by default.</p>
+<pre># from the attacker box, now:
+python3 /opt/scripts/recon.py sweep      # finds nothing
+python3 /opt/scripts/modbus_attack.py stop-dist   # times out
+docker exec crosscreek-router-fw nft list ruleset | grep CC-FW-DROP
+# ... counter packets 240 ... and climbing
+</pre>
+
+<h2>5.3 Module D2: Allowlist the Protocol at the Controller</h2>
+<p>Segmentation stops the attacker who is outside the OT zone. It does nothing about an attacker who has pivoted onto it, through the compromised engineering workstation for instance. So the controllers get a second layer. With <code>MODBUS_WRITE_OPEN=0</code>, the water PLC program enforces a source allowlist: it accepts writes only from the HMI and the process simulator, and it range-checks the dose setpoint on every scan, clamping anything above the safe maximum. The dosing controller drops out of REMOTE. The RTU requires authentication for stop and for breaker-open.</p>
+<p>This is defense in depth expressed as ISA/IEC 62443 conduit enforcement plus defensive coding in the control program. Re-run the Session 3 overdose against the segmented range and watch the setpoint get pulled straight back to the ceiling.</p>
+
+<h2>5.4 Module D3: Harden the Controllers</h2>
+<table>
+<thead><tr><th>Control</th><th>What it stops</th><th>CISA CPG</th></tr></thead>
+<tbody>
+<tr><td>Keyswitch to RUN on the water PLC and the dosing controller</td><td>program downloads (scenarios 8, 9)</td><td>1.E, 2.A</td></tr>
+<tr><td>Station password on the S7 RTU</td><td>unauthenticated stop-CPU and breaker-open (scenario 7)</td><td>2.A</td></tr>
+<tr><td>Per-operator HMI accounts, factory account disabled</td><td>the Aliquippa login (scenario 1)</td><td>2.A, 2.C</td></tr>
+<tr><td>Generic error pages, no tag map leaked</td><td>reconnaissance from an error message</td><td>2.S</td></tr>
+</tbody>
+</table>
+<p>In the segmented range these are all on. Re-run <code>push_logic_water.py</code> and the runtime answers "Keyswitch is in RUN. Program downloads are disabled." Re-run <code>cip_attack.py logic-push</code> and it returns 403. Re-run <code>s7_attack.py stop</code> and the RTU comes straight back to RUN.</p>
+
+<h2>5.5 What You Should Notice</h2>
+<p>Every attack from Sessions 2 through 4 either times out at the firewall or is refused by the controller, and you did not patch a single protocol. You changed who is allowed to talk to what, and you made the controllers stop trusting the network. That is the whole game at Levels 1 and 2. Session 6 adds the parts you need for the attacks that still get through: seeing them, surviving them, and getting back.</p>
+</body>
+</html>

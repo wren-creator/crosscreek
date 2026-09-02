@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>Session 2: Exposure and Access</title>
+<link rel="stylesheet" type="text/css" href="../styles.css"/>
+</head>
+<body>
+<h1>Session 2: Exposure and Access</h1>
+<p>Goal for this session: get in the way the real intrusions of the last few years got in. No exploits, no memory corruption. An exposed service, a default password, and an engineering workstation that hands you the keys. This is scenarios 1 through 3.</p>
+
+<h2>2.1 The Aliquippa Pattern</h2>
+<p>The 2023 water-sector intrusions had one shape. A controller or its HMI was reachable from the internet, and it still had the credential it shipped with. CISA's advisory on the Unitronics devices spelled it out: publicly exposed, TCP port 20256, default password <code>1111</code>. The fix in the advisory was not a patch. It was "disconnect it from the internet and change the password."</p>
+<p>In Cross Creek the water HMI plays that role. In the flat topology the boundary firewall forwards everything, so from the attacker box on the edge network you can reach it, and the login page will even tell you the factory account is still active.</p>
+<pre>python3 /opt/scripts/recon.py creds
+# [+] water HMI admin/admin -&gt; ACCEPTED
+# [+] power HMI admin/admin -&gt; ACCEPTED
+</pre>
+<p>Now open <code>http://127.0.0.1:8071</code> in your browser, log in <code>admin</code> / <code>admin</code>, and you are an operator. Stop the distribution pump from the Controls panel and watch the header pressure start to fall. Move the chlorine setpoint. You have the plant, from a network that in the real world would be the open internet.</p>
+
+<h2>2.2 The Oldsmar Pattern</h2>
+<p>Oldsmar, Florida, February 2021. An operator watched his mouse move on its own. The setpoint for sodium hydroxide, lye, went from about 100 parts per million to about 11,100. He caught it and put it back. The way in was a remote-access tool that was reachable and did not require anything to connect.</p>
+<p>Cross Creek's engineering workstation answers a remote-desktop port with no authentication when the weakness is on.</p>
+<pre>nc -v 172.30.20.20 5900
+# RFB 003.008
+# Cross Creek engineering workstation - no authentication configured
+</pre>
+<p>That is the whole finding. A box that manages the PLCs, reachable from the IT network, that lets anyone connect. On a real site this is a jump box someone stood up "temporarily" so they could check the plant from home, on the office wifi, and never took down.</p>
+
+<h2>2.3 The Workstation Is the Prize</h2>
+<p>The engineering workstation is not interesting because it runs; it is interesting because of what is on it. It serves its project directory over plain HTTP.</p>
+<pre>python3 /opt/scripts/recon.py engws
+</pre>
+<p>That pulls <code>notes.txt</code>, and <code>notes.txt</code> is a gift:</p>
+<pre>water PLC (OpenPLC)   172.30.40.20   web openplc / openplc     Modbus 502
+dosing controller     172.30.40.21   keyswitch REMOTE          EtherNet/IP 44818
+substation RTU        172.30.40.22   no station password set   S7 102
+water HMI             172.30.40.10   admin / admin
+remote in from home:  VNC to 172.30.20.20 :5900  (no password ...)
+</pre>
+<p>It also serves <code>water_plc.st</code>, the golden control program. You now have the runtime login, the fact that the dosing controller keyswitch is in REMOTE, the fact that the RTU has no password, and a copy of the logic you will modify in Session 4. Every real assessment turns up a file like this. It is always called <code>notes.txt</code> or <code>passwords.xlsx</code>, and it is always on a share nobody remembered.</p>
+
+<h2>2.4 Map the Attacks to the Framework</h2>
+<table>
+<thead><tr><th>What you did</th><th>MITRE ATT&amp;CK for ICS</th></tr></thead>
+<tbody>
+<tr><td>Reached the HMI from the edge network</td><td>T0883 Internet Accessible Device</td></tr>
+<tr><td>Logged in with the factory account</td><td>T0812 Default Credentials</td></tr>
+<tr><td>Connected to the unauthenticated remote-desktop port</td><td>T0822 External Remote Services</td></tr>
+<tr><td>Pulled credentials and the project file off the eng-ws share</td><td>T0818 Engineering Workstation Compromise</td></tr>
+</tbody>
+</table>
+
+<h2>2.5 What You Should Notice</h2>
+<p>You have not exploited anything. You found a service that was reachable when it should not have been, used a password that should have been changed at commissioning, and read a file off a share that should have had access control. That is the entire 2021-to-2024 record of public water-sector intrusions, in one session, and it is why the defense half of this course starts with segmentation and credentials before it gets anywhere near a protocol. The next two sessions show you what an intruder does once they are standing where you are standing now.</p>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>Session 6: Now Secure It, Part Two</title>
+<link rel="stylesheet" type="text/css" href="../styles.css"/>
+</head>
+<body>
+<h1>Session 6: Now Secure It, Part Two</h1>
+<p>Goal for this session: the four defensive modules that assume something got through anyway. Monitoring, integrity checking, secure remote access, and backup and recovery. Segmentation and hardening lower the odds; these decide what happens when the odds lose.</p>
+
+<h2>6.1 Module D4: ICS-Aware Monitoring</h2>
+<p>The segmented range runs a Suricata sensor that shares the boundary firewall's network namespace, so one sensor sees every segment. It loads six rules, in <code>net/ids/rules/crosscreek.rules</code>, and that is the whole point: OT traffic is narrow and predictable, so a handful of rules covers the attack set. The rules flag an edge host reaching any PLC port, an ICS protocol spoken to a PLC by anything that is not an HMI or the historian, and the two program-download paths.</p>
+<pre>curl -s http://127.0.0.1:9411/
+# 2026-... 172.30.10.10:41920 -&gt; 172.30.40.20:502  [CC ICS: edge host reaching a PLC protocol port]
+</pre>
+<p>Run any Session 2 to 4 attack against the segmented range and it appears here within a second or two. In segmented mode the firewall already dropped the packet; the sensor tells you someone tried. This maps to CISA CPG 3.A, log collection and detection. A real deployment would ship these to a SIEM; the <code>:9411</code> tail exists so you can see the mechanism without learning one first.</p>
+
+<h2>6.2 Module D5: Integrity and One-Way Data</h2>
+<p>Session 3 ended with a blinded HMI: the operator's view held at nominal while the plant failed behind it. Two controls address that. First, the segmented HMI adds a plausibility check: a process value that moved faster than the physical model allows is flagged rather than shown. Second, the historian link is made one-way. With <code>HISTORIAN_READONLY=1</code> the historian opens only read paths into OT and the firewall conduit permits only the read ports, so a compromised historian cannot be a route back in. An independent, trustworthy record of what the plant actually did is also what lets you catch a blinding attack: compare the HMI against the historian and the divergence is the alarm.</p>
+
+<h2>6.3 Module D6: Secure Remote Access</h2>
+<p>Session 2's unauthenticated remote-desktop port is gone in the segmented range (<code>EXPOSE_REMOTE_ACCESS=0</code>). In its place is a DMZ jump host. An engineer working from home reaches the jump host, authenticates, and from there reaches only the HMI network, not the PLCs directly. The firewall enforces it: a direct path from the engineering workstation to a PLC is dropped and logged; the path through the jump host works.</p>
+<pre># from the engineering workstation, in segmented mode:
+nc -vz 172.30.40.20 502            # dropped
+ssh operator@172.30.30.40          # jump host: allowed
+# and from there, to the HMI network only
+</pre>
+<p>This is the pattern the Oldsmar and Aliquippa after-action guidance keeps repeating: no direct inbound access to OT, terminate remote sessions in the DMZ, and use phishing-resistant MFA (CISA CPG 2.H).</p>
+
+<h2>6.4 Module D7: Backup and Recovery</h2>
+<p>Scenario 9 deleted a safety interlock from the running program. The only thing that undoes that is a known-good copy. <code>./reset.sh</code> is the range's version of the recovery drill: it reloads the golden PLC program, resets the process to nominal setpoints, and clears the historian and any attacker-planted state.</p>
+<pre>./reset.sh -y
+# reloads crosscreek_water_v1 (golden), clears alarms, restores setpoints
+</pre>
+<p>On a real site this is a procedure, not a script: an offline, version-controlled, ideally signed copy of every controller's program and every HMI's configuration, a documented restore sequence, and a schedule for testing that the restore actually works. CISA CPG 7.A. The uncomfortable question this module asks every plant is: if your integrator went out of business, do you have your own PLC program?</p>
+
+<h2>6.5 What You Should Notice</h2>
+<p>Sessions 5 and 6 are seven controls and not one of them is exotic. Segment the network. Allowlist the protocol. Lock the keyswitch. Set the password. Watch the traffic. Keep an honest record. Terminate remote access in a DMZ. Keep a golden backup and test the restore. The Aliquippa and Lviv intrusions succeeded against plants that had done none of these. A plant that does all seven is not unbreakable, but it is no longer low-hanging fruit, and it can recover when something does get through. Session 7 puts it all together.</p>
+</body>
+</html>

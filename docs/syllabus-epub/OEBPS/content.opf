@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='utf-8'?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title id="title">Cross Creek 101: A Hands-On Training Syllabus for the Cross Creek ICS/OT Security Range</dc:title>
+    <dc:creator id="creator">Britley Hoff</dc:creator>
+    <dc:identifier id="uid">urn:uuid:6d5a9e2c-1f4b-4c8a-9d3e-cc0101cc0101</dc:identifier>
+    <dc:language>en</dc:language>
+    <meta refines="#title" property="title-type">main</meta>
+    <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>
+    <meta property="dcterms:modified">2026-09-02T00:00:00Z</meta>
+  </metadata>
+  <manifest>
+    <item id="chap00" href="chapters/00-front.xhtml" media-type="application/xhtml+xml"/>
+    <item id="chap01" href="chapters/01-orientation.xhtml" media-type="application/xhtml+xml"/>
+    <item id="chap02" href="chapters/02-exposure-and-access.xhtml" media-type="application/xhtml+xml"/>
+    <item id="chap03" href="chapters/03-modbus.xhtml" media-type="application/xhtml+xml"/>
+    <item id="chap04" href="chapters/04-vendor-dialects.xhtml" media-type="application/xhtml+xml"/>
+    <item id="chap05" href="chapters/05-segmentation-hardening.xhtml" media-type="application/xhtml+xml"/>
+    <item id="chap06" href="chapters/06-monitoring-recovery.xhtml" media-type="application/xhtml+xml"/>
+    <item id="chap07" href="chapters/07-capstone.xhtml" media-type="application/xhtml+xml"/>
+    <item id="chap08" href="chapters/08-closing-author.xhtml" media-type="application/xhtml+xml"/>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="css" href="styles.css" media-type="text/css"/>
+    <item id="cover-img" href="assets/cover.png" media-type="image/png" properties="cover-image"/>
+  </manifest>
+  <spine>
+    <itemref idref="chap00"/>
+    <itemref idref="chap01"/>
+    <itemref idref="chap02"/>
+    <itemref idref="chap03"/>
+    <itemref idref="chap04"/>
+    <itemref idref="chap05"/>
+    <itemref idref="chap06"/>
+    <itemref idref="chap07"/>
+    <itemref idref="chap08"/>
+  </spine>
+  <guide>
+    <reference type="toc" title="Table of Contents" href="nav.xhtml"/>
+  </guide>
+</package>

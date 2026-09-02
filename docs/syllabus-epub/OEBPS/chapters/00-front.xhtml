@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>Cross Creek 101</title>
+<link rel="stylesheet" type="text/css" href="../styles.css"/>
+</head>
+<body>
+<h1>Cross Creek 101</h1>
+<h3>A Hands-On Training Syllabus for the Cross Creek ICS/OT Security Range</h3>
+<p>By Britley Hoff</p>
+<p>2026 Edition</p>
+<hr />
+<p>In November 2023 a water authority in Aliquippa, Pennsylvania lost control of a booster station. Not to a zero-day, not to a nation-state exploit chain. To a programmable logic controller sitting on the public internet with the password still set to the number one, four times. A group calling itself CyberAv3ngers walked in the front door and put a message on the screen, and they did the same thing to water systems in several other states. A few months later, in Lviv, malware called FrostyGoop spoke plain Modbus to a rack of heating controllers and left six hundred apartment buildings cold for two days in January.</p>
+<p>None of that was clever. That is the part people miss. The controllers that run water plants and substations were designed in an era when "on the network" meant "on a serial cable in a locked room," and most of them still trust anything that can reach the port. The attacks that are working right now are the boring ones: default credentials, a protocol with no authentication, a flat network, an engineering laptop nobody segmented off.</p>
+<p>I have spent a good part of my career on the other side of this. Alongside the mainframe work I am a Master-level industrial electrician, and I have wired, programmed, and troubleshot Siemens and Allen-Bradley PLCs and their ladder logic on the kind of equipment this course simulates. I have stood in the MCC room. I know what a metering pump sounds like when it is running wide open, and I know that "just restore from the golden program" is a sentence that assumes somebody kept a golden program.</p>
+<p>This is a seven-session course built entirely on the Cross Creek range: a mock municipal water treatment plant and a small power substation, driven by three simulated controllers that speak the real protocols, Modbus/TCP, EtherNet/IP, and Siemens S7comm. A Python process simulator plays the physical world, coarsely and on purpose. Open a valve and the chlorine rises. Stop a pump and the tank drains. Every command in this book was run against the actual containers before it went to print.</p>
+<p>The first four sessions are the attack half. You will find an internet-exposed HMI and log in with the factory account, stop the distribution pump with twenty lines of Python, drive the chlorine residual past four parts per million, halt a substation RTU, and replace a running control program with one that has the high-level interlock cut out. The last three are the defense half, run against the same range with one flag flipped: you segment the network, put a source allowlist on the controllers, lock the keyswitches, stand up an ICS-aware sensor, and rehearse the recovery. Then a capstone that chains the whole attack and then closes every hole, followed by an incident-response tabletop.</p>
+<p>A training environment that is honest about its own edges is more useful than one that hopes you will not notice them. Where Cross Creek uses a stand-in, this book says so. The Allen-Bradley logic download, for instance, is not the real Studio 5000 wire format, because that cannot be reproduced without Rockwell's tooling; it is an unauthenticated service that swaps the controller's logic, and it teaches the concept and the detection, not the packet layout. That is called out where it happens.</p>
+
+<h2>Standing Up the Range</h2>
+<p>Cross Creek is one <code>docker-compose</code> stack. Ten containers on five bridge networks laid out along the Purdue model: an edge network for the attacker, an IT network, a DMZ, one flat OT network for the HMIs and PLCs, and an internal field bus. Every published port binds to <code>127.0.0.1</code>. The attacker box has no route to the internet, and <code>status.sh</code> proves it.</p>
+<pre>cd crosscreek
+./setup.sh              # preflight, build the images
+./start.sh              # bring it up with the deliberate weaknesses on
+./status.sh             # health, the loopback bind audit, the containment probe
+./start.sh --segmented  # the defended topology, for Sessions 5 to 7
+./reset.sh              # restore the golden state between cohorts
+</pre>
+<table>
+<thead><tr><th>Surface</th><th>Address</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Water HMI</td><td><code>http://127.0.0.1:8071</code></td><td>the plant overview screen</td></tr>
+<tr><td>Power HMI</td><td><code>http://127.0.0.1:8072</code></td><td>the substation single-line</td></tr>
+<tr><td>Water PLC runtime UI</td><td><code>http://127.0.0.1:8073</code></td><td>OpenPLC-style console, used in Session 4</td></tr>
+<tr><td>Water PLC (Modbus/TCP)</td><td><code>127.0.0.1:5020</code></td><td>container port 502</td></tr>
+<tr><td>Dosing PLC (EtherNet/IP)</td><td><code>127.0.0.1:4840</code></td><td>container port 44818</td></tr>
+<tr><td>Substation RTU (S7comm)</td><td><code>127.0.0.1:1020</code></td><td>container port 102</td></tr>
+<tr><td>IDS alerts</td><td><code>http://127.0.0.1:9411</code></td><td>segmented mode only</td></tr>
+</tbody>
+</table>
+
+<h3>Accounts you are given</h3>
+<table>
+<thead><tr><th>Who</th><th>Credentials</th><th>Use</th></tr></thead>
+<tbody>
+<tr><td>Water and power HMI</td><td><code>admin</code> / <code>admin</code></td><td>the factory default the plant never changed</td></tr>
+<tr><td>Water PLC runtime</td><td><code>openplc</code> / <code>openplc</code></td><td>the OpenPLC-style console, Session 4</td></tr>
+<tr><td>Attacker workstation</td><td><code>docker exec -it crosscreek-attacker bash</code></td><td>scripts under <code>/opt/scripts</code></td></tr>
+</tbody>
+</table>
+<p>The instructor edition of the scenario guide, <code>docs/scenarios.md</code>, maps every one of the ten planted weaknesses to the exact command that proves it, the physical consequence in the simulation, and the fix, with its CISA Cross-Sector Cybersecurity Performance Goal and its ISA/IEC 62443 clause. You work from <code>docs/scenarios-trainee.md</code>, the same document with the fix removed.</p>
+
+<h2>Authorised Use</h2>
+<blockquote>Use Cross Creek only: on your own machine; in a lab you control; in a classroom or range where you have permission; under written rules of engagement for authorised training or assessment. Never point a Cross Creek command, script, payload, scan, or credential at a real utility, a real PLC, or any system you do not own. ICS attacks have physical consequences. People can be hurt. This range exists so you never have to learn that on a live one.</blockquote>
+</body>
+</html>

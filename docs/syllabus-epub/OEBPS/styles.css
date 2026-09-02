@@ -1,0 +1,17 @@
+
+body { font-family: Georgia, "Times New Roman", serif; line-height: 1.5; margin: 1.2em; color: #1a1a1a; }
+h1 { font-family: "Courier New", monospace; font-size: 1.6em; border-bottom: 3px solid #0e7490; padding-bottom: 0.2em; margin-top: 0; }
+h2 { font-family: "Courier New", monospace; font-size: 1.25em; color: #0b5566; margin-top: 1.6em; }
+h3 { font-family: "Courier New", monospace; font-size: 1.05em; color: #0b5566; }
+p { margin: 0.8em 0; }
+code, pre { font-family: "Courier New", monospace; }
+pre { background: #0b1418; color: #4fd6e0; padding: 0.8em; overflow-x: auto; font-size: 0.85em; border-radius: 4px; }
+code { background: #e6f1f3; padding: 0.1em 0.3em; border-radius: 3px; }
+pre code { background: none; padding: 0; color: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+th, td { border: 1px solid #ccc; padding: 0.4em 0.6em; text-align: left; vertical-align: top; }
+th { background: #0e7490; color: #fff; font-family: "Courier New", monospace; }
+tr:nth-child(even) { background: #f0f7f8; }
+blockquote { border-left: 4px solid #0e7490; margin: 1em 0; padding: 0.3em 1em; background: #f0f7f8; }
+hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
+strong { color: #0b5566; }

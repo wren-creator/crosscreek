@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>Session 7: Capstone and Incident Response</title>
+<link rel="stylesheet" type="text/css" href="../styles.css"/>
+</head>
+<body>
+<h1>Session 7: Capstone and Incident Response</h1>
+<p>Goal for this session: chain the whole attack against the flat range from a single foothold, write it up the way you would for a client, then flip to the segmented range and confirm every link in the chain is now broken. Finish with an incident-response tabletop. There is nothing new to learn here; every command below was covered in an earlier session.</p>
+
+<h2>7.1 The Chain</h2>
+<p>Start with one assumption: you have a shell on the engineering workstation. Everything else you earn.</p>
+<table>
+<thead><tr><th>Step</th><th>What you do</th><th>Session</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>recon.py engws</code> from the eng-ws: read <code>notes.txt</code>, get every controller address, the runtime login, the RTU's "no password" state; grab <code>water_plc.st</code></td><td>2</td></tr>
+<tr><td>2</td><td><code>recon.py sweep</code> and <code>recon.py creds</code>: confirm the OT layout, log into both HMIs with <code>admin</code> / <code>admin</code></td><td>1, 2</td></tr>
+<tr><td>3</td><td><code>modbus_attack.py stop-dist</code>: collapse the header pressure target, the town starts losing pressure</td><td>3</td></tr>
+<tr><td>4</td><td>Blind the water HMI: hold the input-register mirror at nominal while step 3 runs</td><td>3</td></tr>
+<tr><td>5</td><td><code>push_logic_water.py</code>: replace the water PLC program, delete the high-level interlock</td><td>4</td></tr>
+<tr><td>6</td><td><code>cip_attack.py logic-push</code>: force the metering pump to 100%, bypass the overdose interlock</td><td>4</td></tr>
+<tr><td>7</td><td><code>s7_attack.py trip feeder</code> then <code>trip load</code>: island the substation, drive the frequency excursion</td><td>4</td></tr>
+<tr><td>8</td><td><code>s7_attack.py stop</code>: halt the RTU so the operator cannot re-close the breakers</td><td>4</td></tr>
+</tbody>
+</table>
+<p>At the end of the chain: the raw tank is overflowing, contaminated water is heading for the main, the operator's screen shows a healthy plant, and the substation feeding the plant is dark and unresponsive. Reset the range with <code>./reset.sh</code> when you have seen it.</p>
+
+<h2>7.2 The Write-Up</h2>
+<p>Produce a report a plant manager and a regulator could both read. Four parts.</p>
+<table>
+<thead><tr><th>Section</th><th>Contents</th></tr></thead>
+<tbody>
+<tr><td>Narrative</td><td>the chain in plain language, foothold to impact, with the time each step took</td></tr>
+<tr><td>Evidence</td><td>the exact commands, the HMI and historian readings before and after each step, the IDS output (or its silence, in flat mode)</td></tr>
+<tr><td>Impact</td><td>what each step means physically: lost pressure, water quality, environmental release, loss of power to the plant, and who is affected</td></tr>
+<tr><td>Remediation</td><td>per step, the control from Sessions 5 and 6 that breaks it, with its CISA CPG and ISA/IEC 62443 reference, and a realistic estimate of effort</td></tr>
+</tbody>
+</table>
+
+<h2>7.3 Break the Chain</h2>
+<pre>./start.sh --segmented
+</pre>
+<p>Now walk the same eight steps and record where each one dies.</p>
+<table>
+<thead><tr><th>Step</th><th>What stops it in the segmented range</th></tr></thead>
+<tbody>
+<tr><td>1, 2</td><td>eng-ws share and the factory HMI accounts are gone; the jump host is the only remote path</td></tr>
+<tr><td>3</td><td>firewall drops eng-ws -&gt; PLC; the PLC allowlist would reject the write anyway; IDS alerts</td></tr>
+<tr><td>4</td><td>the HMI plausibility check flags the frozen values</td></tr>
+<tr><td>5</td><td>runtime keyswitch is in RUN, upload refused</td></tr>
+<tr><td>6</td><td>dosing controller out of REMOTE, logic-update returns 403</td></tr>
+<tr><td>7, 8</td><td>RTU requires authentication, re-asserts RUN, ignores unauthenticated breaker-open; IDS alerts</td></tr>
+</tbody>
+</table>
+<p>Every step. That is the deliverable: proof that a defined, unexotic set of controls breaks a real attack chain at every link.</p>
+
+<h2>7.4 Incident-Response Tabletop</h2>
+<p>Run this as a discussion, 45 minutes, no keyboards. The scenario: at 02:00 the on-call operator gets a low-pressure alarm from the distribution system, and the water HMI looks normal. Walk it through:</p>
+<ul>
+<li><strong>Detect.</strong> What tells you this is an incident and not a sensor fault? Who compares the HMI to the historian? What does the IDS show?</li>
+<li><strong>Contain.</strong> Can you isolate OT from IT without stopping the plant? Who has the authority to do that at 02:00, and is that written down?</li>
+<li><strong>Eradicate.</strong> How do you know which controller's program was changed? Where is the golden copy, and who can load it?</li>
+<li><strong>Recover.</strong> What is the sequence to bring the plant back to a known-good state, and how do you verify the water is safe before you release the boil-water notice?</li>
+<li><strong>Report.</strong> Who do you call: CISA, the state primacy agency, the WaterISAC, law enforcement? What are the timelines?</li>
+</ul>
+<p>The CISA and EPA water-sector incident-response guidance is the reference. The tabletop's job is to find the sentence in your plan that starts "we would just..." and does not survive contact with 02:00.</p>
+
+<h2>7.5 Closing the Loop</h2>
+<p>You attacked a plant with a Python client and a browser, and then you closed every hole with controls that cost planning more than money. That gap, between how little sophistication the attack needed and how ordinary the defense was, is the whole lesson of Cross Creek. The utilities in the news were not outmatched. They were unsegmented, and they had default passwords, and nobody had ever run the tabletop. Now you have.</p>
+</body>
+</html>

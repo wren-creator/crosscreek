@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>Session 4: Vendor Dialects</title>
+<link rel="stylesheet" type="text/css" href="../styles.css"/>
+</head>
+<body>
+<h1>Session 4: Vendor Dialects</h1>
+<p>Goal for this session: leave generic Modbus behind and speak the two vendor protocols that run most of the installed base, Siemens S7comm and Allen-Bradley's EtherNet/IP, and use each to do something Modbus could not: halt a CPU, operate a breaker, and replace a control program. This is scenarios 7, 8, and 9.</p>
+
+<h2>4.1 S7comm and the Substation RTU (Scenario 7)</h2>
+<p>Siemens S7-300 and S7-400 controllers, and the RTUs built on that family, speak a protocol usually called S7comm over TCP port 102. Beyond reading and writing data blocks, it carries PLC-control functions: stop the CPU, start it, change its operating mode. On the older devices, and on plenty of newer ones that were never configured otherwise, none of that requires a password. Industroyer, the malware that opened breakers in Kyiv in 2016, used protocol-native commands like these.</p>
+<pre>python3 /opt/scripts/s7_attack.py read
+python3 /opt/scripts/s7_attack.py trip feeder     # open breaker 52-F
+</pre>
+<p>Opening the feeder breaker islands the substation: it is now running on local generation alone. Watch the power HMI. With the load still connected the frequency sags; trip the load breaker too and the generation now vastly exceeds the load, and the frequency ramps upward past 50.5 Hz until the excursion alarm latches. On a real grid this is where protective relays start tripping things to save equipment, and customers go dark.</p>
+<pre>python3 /opt/scripts/s7_attack.py stop            # halt the RTU CPU
+</pre>
+<p>Now the RTU is in STOP. The operator still has their screen, but their commands do nothing, and the last outputs are frozen. This is the quiet version of the attack: no dramatic excursion, just a substation that no longer answers its operator.</p>
+
+<h2>4.2 EtherNet/IP, CIP, and the Dosing Controller (Scenario 8)</h2>
+<p>Allen-Bradley controllers speak EtherNet/IP, which carries the Common Industrial Protocol, CIP, on TCP port 44818. Tag reads and writes are unauthenticated. If the controller keyswitch is in REMOTE, it will also accept a program download.</p>
+<pre>python3 /opt/scripts/cip_attack.py read
+python3 /opt/scripts/cip_attack.py set 15         # write the DoseSetpoint tag
+</pre>
+<p>The tag write drives the metering rate up, and just like the Modbus setpoint attack in Session 3, the downstream interlock catches the residual near 4 ppm. So you take the second step.</p>
+<pre>python3 /opt/scripts/cip_attack.py logic-push
+# program accepted, rev 2
+# metering pump forced to 100%, downstream interlock bypassed
+</pre>
+<blockquote>Honest scope note. A real Studio 5000 download is not reproducible without Rockwell's tooling, so Cross Creek does not fake the wire format. The dosing controller runs an unauthenticated service that, on this request, swaps its control logic for one that pins the metering pump wide open and ignores the residual sensor. What is real here is the lesson: an unauthenticated program-change path on a controller in REMOTE, and the fact that it bumps a <code>LogicRev</code> counter that a historian could alarm on. What is a stand-in is the packet layout.</blockquote>
+<p>With the pushed logic running, the chlorine residual climbs past 4, past 10, toward 20 ppm, with nothing to stop it. This is the attack that actually reaches the tap.</p>
+
+<h2>4.3 Replace the Water PLC's Program (Scenario 9)</h2>
+<p>The water PLC runs an OpenPLC-style runtime with a web console on port 8080, published at <code>http://127.0.0.1:8073</code>. Its login is <code>openplc</code> / <code>openplc</code>, which you found in <code>notes.txt</code> in Session 2. While the keyswitch is in REMOTE it will accept a program upload, and the uploaded program becomes the running control logic on the next scan.</p>
+<pre>python3 /opt/scripts/push_logic_water.py
+</pre>
+<p>The script uploads a control program that is the golden one with a single change: the high-level interlock, the block that force-stops the intake pump above 98 percent, is gone. Open the console and confirm the running program is now <code>crosscreek_water_v1_PATCHED</code>. Then watch LT-101 on the water HMI. The intake pump no longer stops. The raw tank fills to 100 percent and overflows, and there is no software left that will do anything about it.</p>
+<p>Chain this with 4.2 and you have the full kinetic outcome: a tank overflowing into the environment, and contaminated water heading for the distribution main, with every safety interlock either bypassed or deleted.</p>
+
+<h2>4.4 What You Should Notice</h2>
+<p>The vendor protocols did not make you work harder than Modbus did. They gave you <em>more</em>: the ability to stop a CPU, operate a breaker, and rewrite the logic itself. And notice where the real danger lived in every case. It was not the setpoint write, which the interlocks caught. It was the second step, the one that removed or bypassed the safety logic. An intruder who only tampers with values gets caught by a well-written program. An intruder who can change the program is the one that ends up on the news. Session 5 starts locking that door.</p>
+</body>
+</html>

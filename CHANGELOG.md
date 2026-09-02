@@ -6,6 +6,16 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Added
+- *Cross Creek 101* EPUB (`docs/Cross-Creek-101-Syllabus.epub`, source under
+  `docs/syllabus-epub/`): front matter with the range bring-up and the
+  authorised-use notice, seven session chapters (orientation and the Purdue
+  model; exposure and access; Modbus; vendor dialects; segmentation and
+  hardening; monitoring and recovery; capstone and IR tabletop), and the
+  About the Author / closing bookend. Same structure and build script as the
+  Mainframe 100 series and Widgetorium; teal accent. Builds clean, mimetype
+  stored first, all XHTML well-formed. Cover generated for the range.
+
+### Added
 - Documentation filled in: `docs/scenarios.md` (all ten entries with the exact
   attacker command, the physical consequence observed in the sim, and the fix
   mapped to a CISA CPG and an ISA/IEC 62443 clause), `docs/scenarios-trainee.md`
