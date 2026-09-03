@@ -6,6 +6,14 @@ All notable changes to Cross Creek are recorded here. Format follows
 ## [Unreleased]
 
 ### Changed
+- Water HMI mimic redrawn for a correct P&ID and no overlapping elements: the
+  antiscalant now tees into the feed, the NaOH is dosed inter-pass (between RO1
+  and RO2, with RO1 permeate looping back under RO2 to feed it from the left),
+  RO2 permeate runs to the DI tank, and the DI Loop Return actually returns to
+  the tank instead of ending in mid-air. Taller viewBox, the sequence column
+  and the Draw-off / Release indicators moved to a clear lane, and every tag
+  box repositioned off the racks, pipes and labels. `tankfill` maths fixed for
+  the new tank geometry.
 - Dropped the real "Siemens" / "SIMATIC" trademarks: the HMI panel is now a
   fictional **STEMENS SIMATIX HMI** (a recognisable nod, not the mark). The S7
   protocol keeps its universal tooling name (`S7comm`, `snap7`).
