@@ -3,58 +3,57 @@
 All notable changes to Cross Creek are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.2.0] - 2026-09-03
+
+The water plant is now a reverse-osmosis demineralisation plant with a
+SIMATIX-style operator panel. The power substation and the whole defended
+half are unchanged.
 
 ### Changed
-- Water HMI mimic redrawn for a correct P&ID and no overlapping elements: the
-  antiscalant now tees into the feed, the NaOH is dosed inter-pass (between RO1
-  and RO2, with RO1 permeate looping back under RO2 to feed it from the left),
-  RO2 permeate runs to the DI tank, and the DI Loop Return actually returns to
-  the tank instead of ending in mid-air. Taller viewBox, the sequence column
-  and the Draw-off / Release indicators moved to a clear lane, and every tag
-  box repositioned off the racks, pipes and labels. `tankfill` maths fixed for
-  the new tank geometry.
-- Dropped the real "Siemens" / "SIMATIC" trademarks: the HMI panel is now a
-  fictional **STEMENS SIMATIX HMI** (a recognisable nod, not the mark). The S7
-  protocol keeps its universal tooling name (`S7comm`, `snap7`).
-- All HMI text and messages are English. The German panel terms are gone:
-  "Grundbild" -> "Plant Overview", "Freigabe an Mischerei" -> "Release to
-  Consumers" (coil `CO_FREIGABE` -> `CO_RELEASE`, `io.freigabe` ->
-  `io.release_ok`, JSON `release.freigabe` -> `release.ok`), "Mischerei" ->
-  "point of use", "Meldungen" -> "Alarms", "Regler" -> "Controllers",
-  "Sanitisieren" -> "Sanitise", the login page ("Passwort", "Anmelden", ...),
-  the alarm-text table, and the clock locale.
 
-### Changed
-- The water plant is now a two-pass reverse-osmosis demineralisation train
-  with a recirculating DI distribution loop, modelled on a real STEMENS
-  SIMATIX-panelled ultrapure-water plant: feed + antiscalant dosing, RO1, NaOH
-  inter-pass dosing, RO2, a DI storage tank (3B401), a loop circulation pump
-  (3P401), a UV steriliser (3UV401), and a conductivity-based release interlock
-  ("Release to Consumers"). Far more to play with, ~15 live process values,
-  six pumps, four AUTO/HAND blocks, four sequences (RO / Loop / CIP /
-  Sanitise), and an editable Parameter/Regler screen.
-- `hmi/water` is redesigned as a STEMENS SIMATIX panel "Plant Overview": the teal
-  bezel with SIEMENS / SIMATIX HMI / TOUCH and F1-F8, a title bar with
-  Logon/Plant Overview/System/Reset and a live clock, an alarm banner, the process
-  mimic with overlaid tag boxes (1PT105, 1QAH301, 2QAH401, 3B401, 3PITC401,
-  ...), the four AUTO blocks, the SEQ column, the Abnahme / Release
-  indicators, and the nav tabs. Pump click opens a faceplate; Parameter and
-  Regler open a setpoint editor; Meldungen lists active alarms.
-- Water scenarios keep their shape with new mechanisms: 4 stops the DI loop
-  circulation pump (loop pressure collapse); 5 raises the release conductivity
-  limit so a fouled-membrane degradation passes the quality gate; 6 blinds the
-  conductivity readings; 9 swaps the program to force Release true. Scenario 8
-  (`plc-dosing`) is now the NaOH inter-pass dosing controller. `plc-dosing`
-  itself is unchanged; `process-sim` maps its `DoseRate` to the NaOH L/h.
+- **The water plant is a two-pass RO demineralisation train** with a
+  recirculating DI distribution loop, modelled on a real ultrapure-water
+  plant: feed and antiscalant dosing, RO pass 1, NaOH inter-pass dosing, RO
+  pass 2, a DI storage tank (3B401), a loop circulation pump (3P401), a UV
+  steriliser (3UV401), and a conductivity-gated release interlock ("Release to
+  Consumers"). Far more to play with: ~15 live process values, six pumps with
+  per-device AUTO/HAND, four AUTO blocks, four sequences (RO / Loop / CIP /
+  Sanitise), and an editable Parameters / Controllers setpoint screen.
+  `process-sim/model_water.py` couples them, cut the antiscalant and the
+  membranes foul, cut the NaOH and CO2 breaks through, stop the loop pump and
+  the pressure bleeds out.
+- **`hmi/water` is redrawn as a fictional STEMENS SIMATIX HMI "Plant
+  Overview"**: the teal bezel with STEMENS / SIMATIX HMI / TOUCH and F1-F8, a
+  title bar with a live clock, an alarm banner, the process mimic with a
+  correct P&ID (antiscalant into the feed, NaOH inter-pass, RO2 permeate to
+  the tank, the DI Loop Return closing back to the tank) and overlaid tag
+  boxes, the four AUTO blocks, the sequence column, the Draw-off / Release
+  indicators, and the nav tabs. Click a pump for its faceplate; Parameters and
+  Controllers open a setpoint editor; Alarms lists active alarms.
+- **Dropped the real "Siemens" / "SIMATIC" trademarks** for a fictional
+  STEMENS SIMATIX brand. The S7 protocol keeps its universal tooling name
+  (`S7comm`, `snap7`).
+- **All HMI text is English.** The German panel terms are gone: "Grundbild" ->
+  "Plant Overview", "Freigabe an Mischerei" -> "Release to Consumers" (coil
+  `CO_FREIGABE` -> `CO_RELEASE`, `io.freigabe` -> `io.release_ok`, JSON
+  `release.freigabe` -> `release.ok`), "Mischerei" -> "point of use",
+  "Meldungen" -> "Alarms", "Regler" -> "Controllers", "Sanitisieren" ->
+  "Sanitise", the login page, the alarm-text table, and the clock locale.
+- **Water scenarios keep their shape** with RO-plant mechanisms: 4 stops the DI
+  loop circulation pump (loop pressure collapse); 5 raises the release
+  conductivity limit so a fouled-membrane degradation passes the quality gate;
+  6 blinds the conductivity readings; 9 swaps the program to force Release
+  true. Scenario 8 (`plc-dosing`) is now the NaOH inter-pass dosing
+  controller; `plc-dosing` itself is unchanged, `process-sim` maps its
+  `DoseRate` to the NaOH rate.
 - `modbus_attack.py` subcommands are now `stop-loop`, `raise-limit`,
   `starve-antiscalant`, `restore`. `push_logic_water.py` uploads
-  `crosscreek_ro_v1_PATCHED`.
-- `docs/scenarios.md` (+ trainee), `docs/verification.md`, `docs/architecture.md`,
-  the README, the *Cross Creek 101* Session 3 chapter, and the instructor
-  slides / answer key / CTF are updated to the RO plant.
-- `recon.py creds` now detects a successful login by the absence of the
-  password field rather than a page marker.
+  `crosscreek_ro_v1_PATCHED`. `recon.py creds` carries the session cookie
+  through the login redirect.
+- `docs/scenarios.md` (+ trainee), `docs/verification.md`,
+  `docs/architecture.md`, the README, the *Cross Creek 101* Session 3 chapter
+  and touches to 00/01/02/04/05/07, and the instructor slides / answer key /
+  CTF are all updated to the RO plant.
 
 ## [0.1.0] - 2026-09-02
 
