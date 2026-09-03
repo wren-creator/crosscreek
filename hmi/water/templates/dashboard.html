@@ -106,12 +106,13 @@
         <path d="M24 428 H235" stroke="#2f6fb0" stroke-width="4"/>
         <circle id="p-P102" class="pump" cx="150" cy="428" r="15" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
         <text x="150" y="455" font-size="10" fill="#12324a" text-anchor="middle">1P102</text>
-        <!-- antiscalant dosed INTO the feed line -->
-        <rect x="60" y="360" width="40" height="40" fill="#c9c86a" stroke="#1b4b7a"/>
-        <circle id="p-P101" class="pump" cx="102" cy="344" r="11" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
-        <text x="102" y="328" font-size="10" fill="#12324a" text-anchor="middle">1P101</text>
-        <path d="M80 380 H102 M102 355 V428" stroke="#8a8a4a" stroke-width="3" fill="none"/>
-        <text x="46" y="392" font-size="9" fill="#12324a" transform="rotate(-90 46 392)">Antiscalant</text>
+        <!-- antiscalant dosing skid: tank -> P101 -> into the feed line -->
+        <rect x="48" y="350" width="36" height="42" fill="#c9c86a" stroke="#1b4b7a"/>
+        <circle id="p-P101" class="pump" cx="112" cy="371" r="11" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="112" y="354" font-size="10" fill="#12324a" text-anchor="middle">1P101</text>
+        <path d="M84 371 H101" stroke="#8a8a4a" stroke-width="3" fill="none"/>
+        <path d="M112 382 V428" stroke="#8a8a4a" stroke-width="3" fill="none"/>
+        <text x="38" y="392" font-size="9" fill="#12324a" transform="rotate(-90 38 392)">Antiscalant</text>
         <!-- feed riser into RO1 (P301 = RO1 high-pressure pump) -->
         <path d="M235 428 V307 H255" stroke="#2f6fb0" stroke-width="4" fill="none"/>
         <circle id="p-P301" class="pump" cx="235" cy="372" r="14" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
@@ -131,11 +132,11 @@
         <!-- RO1 permeate loops back under RO2 (P302 boosts, NaOH dosed inter-pass)
              and feeds RO2 from the left -->
         <path d="M425 307 H445 V240 H245 V183 H255" stroke="#2f6fb0" stroke-width="4" fill="none"/>
-        <circle id="p-P302" class="pump" cx="445" cy="283" r="13" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
-        <text x="463" y="287" font-size="10" fill="#12324a">2P302</text>
+        <circle id="p-P302" class="pump" cx="445" cy="298" r="13" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="464" y="302" font-size="10" fill="#12324a">2P302</text>
         <rect x="505" y="233" width="32" height="34" fill="#7d4a6a" stroke="#1b4b7a"/>
         <text x="521" y="227" font-size="10" fill="#12324a" text-anchor="middle">NaOH</text>
-        <path d="M521 267 V283 H458" stroke="#7d4a6a" stroke-width="3" fill="none"/>
+        <path d="M521 267 V270 H445" stroke="#7d4a6a" stroke-width="3" fill="none"/>
 
         <!-- ================= 3xxx  DI storage + loop ================= -->
         <!-- RO2 permeate to the DI tank -->
@@ -144,7 +145,7 @@
         <rect x="598" y="112" width="104" height="128" fill="#eef4f6" stroke="#1b4b7a" stroke-width="2"/>
         <rect id="tankfill" x="599" y="178" width="102" height="62" fill="#2f6fb0"/>
         <ellipse cx="650" cy="240" rx="52" ry="13" fill="#2f6fb0" stroke="#1b4b7a" stroke-width="2"/>
-        <text x="650" y="100" font-size="11" fill="#12324a" text-anchor="middle">DI Water Tank</text>
+        <text x="650" y="68" font-size="12" font-weight="bold" fill="#12324a" text-anchor="middle">DI Water Tank</text>
         <!-- tank -> loop pump -> UV -> distribution header -->
         <path d="M650 240 V307 H676" stroke="#2f6fb0" stroke-width="4" fill="none"/>
         <circle id="p-P401" class="pump" cx="692" cy="307" r="15" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
@@ -158,8 +159,8 @@
         <path d="M832 299 l12 8 -12 8 z" fill="#2f6fb0"/>
         <text x="826" y="333" font-size="9" fill="#12324a" text-anchor="middle">To point of use</text>
         <!-- recirculation return: header back to the tank, closing the loop -->
-        <path d="M800 307 V84 H650 V112" stroke="#2f6fb0" stroke-width="3" fill="none" opacity="0.6"/>
-        <text x="646" y="80" font-size="10" fill="#12324a" text-anchor="end">DI Loop Return &#8592;</text>
+        <path d="M800 307 V88 H650 V112" stroke="#2f6fb0" stroke-width="3" fill="none" opacity="0.6"/>
+        <text x="726" y="84" font-size="10" fill="#12324a" text-anchor="middle">DI Loop Return &#8592;</text>
       </svg>
 
       <div class="tag" style="left:6%;top:94%"><div class="h">1FQIAHL101</div><div class="v" id="t-feedflow">-- m&#179;/h</div></div>
