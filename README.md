@@ -20,10 +20,10 @@ demineralisation plant with a recirculating DI distribution loop (feed and
 antiscalant, RO1/RO2 with NaOH inter-pass dosing, a DI storage tank, a UV
 steriliser, a release interlock) and a single-bus power substation, driven by
 three simulated controllers that speak real protocols, Modbus/TCP, EtherNet/IP
-(CIP), and Siemens S7comm. A Python process simulator plays the part of the
+(CIP), and S7comm. A Python process simulator plays the part of the
 physical world: cut the antiscalant and the membranes foul, stop the loop pump
 and the pressure bleeds out, tamper the conductivity limit and off-spec water
-is released. The water HMI is styled after a Siemens SIMATIC panel "Grundbild";
+is released. The water HMI is styled after a STEMENS SIMATIX panel "Plant Overview";
 the power HMI is a single-line diagram. A firewall container sits on the
 boundary between the enterprise, DMZ, and OT segments. An attacker workstation
 sits on a hostile "edge" network with no route off the lab.
@@ -79,9 +79,9 @@ docker exec -it crosscreek-attacker bash
 | `docker-compose.segmented.yml` | override that applies the defended topology |
 | `plc/water-openplc/` | OpenPLC runtime, the RO demineralisation plant logic, Modbus/TCP |
 | `plc/dosing-enip/` | Allen-Bradley-style NaOH dosing controller, EtherNet/IP (CIP) |
-| `plc/power-s7/` | Siemens-style substation RTU, S7comm |
+| `plc/power-s7/` | STEMENS-style substation RTU, S7comm |
 | `process-sim/` | the physics: RO conductivity and recovery, DI tank and loop, bus frequency, breaker state |
-| `hmi/water/` `hmi/power/` | operator screens: a SIMATIC-style Grundbild and a single-line diagram (Flask + SVG) |
+| `hmi/water/` `hmi/power/` | operator screens: a SIMATIX-style Plant Overview and a single-line diagram (Flask + SVG) |
 | `eng-ws/` | engineering workstation, holds PLC project files and creds: the pivot box |
 | `historian/` | data historian in the DMZ, one-way replication in segmented mode |
 | `net/router-fw/` | the boundary firewall, `flat` and `segmented` nftables rulesets |
@@ -127,7 +127,7 @@ mapped to MITRE ATT&CK for ICS:
   substation RTU, and CIP tag writes plus an unauthenticated logic push to the
   NaOH dosing controller.
 - **Impact and persistence** (2): a modified control program that forces the
-  "Freigabe an Mischerei" release interlock permanently on, and a wiper-style
+  "Release to Consumers" release interlock permanently on, and a wiper-style
   HMI config clobber.
 
 Trainees work from `docs/scenarios-trainee.md`. Instructors hold

@@ -16,7 +16,7 @@ a third of each block.
 | 2:45 | Lunch | |
 | 3:30 | Session 3: Modbus (scenarios 4–6) | Pair them. One drives the attack, one watches the HMI. Swap. |
 | 4:45 | Break | |
-| 5:00 | Session 4: vendor dialects (scenarios 7–9) | The logic-push is the "aha". Make sure everyone sees RO2 conductivity pass the release limit and Freigabe hold, then flip. |
+| 5:00 | Session 4: vendor dialects (scenarios 7–9) | The logic-push is the "aha". Make sure everyone sees RO2 conductivity pass the release limit and Release hold, then flip. |
 | 5:45 | Day 1 debrief: what did any of that actually require? | Answer should be "nothing". Set up Day 2. |
 
 ## Day 2 — the defense half

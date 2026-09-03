@@ -1,4 +1,4 @@
-# plc-power: the substation RTU. A Siemens-style controller that speaks S7comm
+# plc-power: the substation RTU. A STEMENS-style controller that speaks S7comm
 # on :102 via python-snap7's server. It exposes one data block (DB1) holding the
 # bus frequency, voltage, load, breaker status and breaker commands. A scan
 # loop acts on breaker commands and enforces the operating mode.

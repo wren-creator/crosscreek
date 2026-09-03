@@ -71,20 +71,20 @@ python3 /opt/scripts/recon.py engws       # dumps notes.txt and water_plc.st
 python3 /opt/scripts/modbus_attack.py enum         # read everything
 python3 /opt/scripts/modbus_attack.py stop-loop    # 3P401 -> HAND, then STOP
 ```
-**Physical consequence in the sim:** the DI loop circulation pump stops. Loop pressure (3PITC401) bleeds from 3.8 bar toward zero at about 1.5 bar/s; `DI_LOOP_PRESS_LOW` latches within a couple of seconds. The point-of-use (the "Mischerei") loses supply.
+**Physical consequence in the sim:** the DI loop circulation pump stops. Loop pressure (3PITC401) bleeds from 3.8 bar toward zero at about 1.5 bar/s; `DI_LOOP_PRESS_LOW` latches within a couple of seconds. The point-of-use (the "point of use") loses supply.
 **Fix:** _work this out, then check the instructor edition._
 
 ### 5. Setpoint tampering: raise the release conductivity limit
 **Where:** `plc-water` 172.30.40.20:502, holding register 5 (`HR_COND_LIMIT_US`, x100)
 **Real-world parallel:** Oldsmar, February 2021: the setpoint change itself was the attack (the sodium hydroxide setpoint went from ~100 to ~11,100 ppm).
-**Vulnerability:** the conductivity limit that gates "Freigabe an Mischerei" (release to the consumers) is a writable holding register with no range check.
+**Vulnerability:** the conductivity limit that gates "Release to Consumers" (release to the consumers) is a writable holding register with no range check.
 **MITRE ATT&CK for ICS:** T0836 Modify Parameter, T0806 Brute Force I/O (n/a), T0839 Module Firmware (n/a)
 **Confirm / exploit with:**
 ```bash
 python3 /opt/scripts/modbus_attack.py raise-limit 5.0    # HR5 -> 500 (5.00 uS/cm)
 python3 /opt/scripts/modbus_attack.py starve-antiscalant # foul the membranes to make it matter
 ```
-**Physical consequence in the sim:** on its own the raised limit changes nothing visible. Combined with the antiscalant starve, the RO membranes foul (1QAH301 climbs 12 -> 50 uS/cm over ~30 s, then 2QAH401 follows past 2 uS/cm), but because the limit is now 5.0, `DI_COND_HIGH_RO2` never trips and Freigabe stays true. Off-spec DI water is released. Without the raised limit, the interlock catches the degradation and holds Freigabe off, this attack is contained by the PLC logic.
+**Physical consequence in the sim:** on its own the raised limit changes nothing visible. Combined with the antiscalant starve, the RO membranes foul (1QAH301 climbs 12 -> 50 uS/cm over ~30 s, then 2QAH401 follows past 2 uS/cm), but because the limit is now 5.0, `DI_COND_HIGH_RO2` never trips and Release stays true. Off-spec DI water is released. Without the raised limit, the interlock catches the degradation and holds Release off, this attack is contained by the PLC logic.
 **Fix:** _work this out, then check the instructor edition._
 
 ### 6. False-data injection / HMI blinding
@@ -93,7 +93,7 @@ python3 /opt/scripts/modbus_attack.py starve-antiscalant # foul the membranes to
 **Vulnerability:** the HMI trusts whatever the input registers say. A host on the OT network can hold the mirror registers at a nominal value while the process runs away, or feed the operator a frozen picture.
 **MITRE ATT&CK for ICS:** T0856 Spoof Reporting Message, T0832 Manipulation of View, T0815 Denial of View
 **Confirm / exploit with:** from the attacker box, repeatedly write the input-register mirror (IR 0-15) or the field-I/O block (HR 10-22) to hold nominal values while running scenario 4 or 5. A tight `pymodbus` loop is the whole exploit.
-**Physical consequence in the sim:** the HMI shows RO2 conductivity at 0.5 uS/cm and Freigabe green while the loop is actually circulating off-spec water. The operator has no reason to act.
+**Physical consequence in the sim:** the HMI shows RO2 conductivity at 0.5 uS/cm and Release green while the loop is actually circulating off-spec water. The operator has no reason to act.
 **Fix:** _work this out, then check the instructor edition._
 
 ---
@@ -102,7 +102,7 @@ python3 /opt/scripts/modbus_attack.py starve-antiscalant # foul the membranes to
 
 ### 7. S7comm stop-CPU and breaker trip on the substation RTU
 **Where:** `plc-power` 172.30.40.22:102
-**Real-world parallel:** the stop-CPU and mode-change primitives are a documented class against S7-300/400-era devices; Industroyer/CRASHOVERRIDE used protocol-native commands to operate breakers on the Ukrainian grid in 2016.
+**Real-world parallel:** the stop-CPU and mode-change primitives are a documented class against S7-family devices; Industroyer/CRASHOVERRIDE used protocol-native commands to operate breakers on the Ukrainian grid in 2016.
 **Vulnerability:** the RTU accepts S7 PLC-control functions (stop, start, mode) and data-block writes with no station password.
 **MITRE ATT&CK for ICS:** T0816 Device Restart/Shutdown, T0858 Change Operating Mode, T0855 Unauthorized Command Message, T0879 Damage to Property
 **Confirm / exploit with:**
@@ -126,7 +126,7 @@ python3 /opt/scripts/cip_attack.py read
 python3 /opt/scripts/cip_attack.py set 15         # write DoseSetpoint (contained by the interlock)
 python3 /opt/scripts/cip_attack.py logic-push     # POST the unauthenticated download
 ```
-**Physical consequence in the sim:** the tag write drives the NaOH metering rate up; the caustic overdose pushes RO2 conductivity (2QAH401) past 2 uS/cm, but the release interlock catches it and holds Freigabe off. The logic push sets `LogicForced`: the metering pump pins at 100% and the pushed program also drives the loop return conductivity up sharply (contaminant term), so `DI_COND_HIGH_LOOP` latches, Freigabe is firmly blocked, and the DI loop is circulating off-spec water. `LogicRev` increments. Getting that water *released* still needs scenario 5 (raise the limit) or scenario 9 (remove the interlock).
+**Physical consequence in the sim:** the tag write drives the NaOH metering rate up; the caustic overdose pushes RO2 conductivity (2QAH401) past 2 uS/cm, but the release interlock catches it and holds Release off. The logic push sets `LogicForced`: the metering pump pins at 100% and the pushed program also drives the loop return conductivity up sharply (contaminant term), so `DI_COND_HIGH_LOOP` latches, Release is firmly blocked, and the DI loop is circulating off-spec water. `LogicRev` increments. Getting that water *released* still needs scenario 5 (raise the limit) or scenario 9 (remove the interlock).
 **Honest scope note:** a real Studio 5000 download cannot be emulated without Rockwell tooling. The container runs an unauthenticated logic-update service that swaps its tag logic; it teaches the concept and the detection, not the wire format.
 **Fix:** _work this out, then check the instructor edition._
 
@@ -141,9 +141,9 @@ python3 /opt/scripts/cip_attack.py logic-push     # POST the unauthenticated dow
 **MITRE ATT&CK for ICS:** T0889 Modify Program, T0843 Program Download, T0831 Manipulation of Control, T0832 Manipulation of View
 **Confirm / exploit with:**
 ```bash
-python3 /opt/scripts/push_logic_water.py          # upload a program that forces Freigabe true and drops the RO2 hard-safety
+python3 /opt/scripts/push_logic_water.py          # upload a program that forces Release true and drops the RO2 hard-safety
 ```
-**Physical consequence in the sim:** the running program is now `crosscreek_ro_v1_PATCHED`. "Freigabe an Mischerei" is forced true regardless of conductivity or UV, and the RO2 hard-safety no longer stops pass 2 on grossly off-spec permeate. Chain it with scenario 5 or 8 to degrade the water and it flows to the consumers with nothing left to stop it. On its own it is a latent failure: the safety is gone but nothing bad is happening yet.
+**Physical consequence in the sim:** the running program is now `crosscreek_ro_v1_PATCHED`. "Release to Consumers" is forced true regardless of conductivity or UV, and the RO2 hard-safety no longer stops pass 2 on grossly off-spec permeate. Chain it with scenario 5 or 8 to degrade the water and it flows to the consumers with nothing left to stop it. On its own it is a latent failure: the safety is gone but nothing bad is happening yet.
 **Fix:** _work this out, then check the instructor edition._
 
 ### 10. Wiper-style HMI config clobber

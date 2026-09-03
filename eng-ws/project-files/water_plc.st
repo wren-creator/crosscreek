@@ -39,7 +39,7 @@ PROGRAM main
     p302_ro2       : BOOL;   (* 2P302 *)
     p401_loop      : BOOL;   (* 3P401 *)
     uv401          : BOOL;   (* 3UV401 *)
-    freigabe       : BOOL;   (* release to consumers *)
+    release_ok       : BOOL;   (* release to consumers *)
     bypass_ilk     : BOOL;   (* operator release-interlock bypass *)
   END_VAR
 
@@ -67,8 +67,8 @@ PROGRAM main
   p401_loop := seq_loop;
   uv401     := seq_loop;
 
-  (* --- release interlock: Freigabe an Mischerei --- *)
-  freigabe := ( (ro2_cond <= cond_limit)
+  (* --- release interlock: Release to Consumers --- *)
+  release_ok := ( (ro2_cond <= cond_limit)
             AND (loop_ret_cond <= cond_limit)
             AND (uv_intensity >= uv_min)
             AND (di_tank > 10.0) )

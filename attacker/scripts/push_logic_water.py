@@ -3,7 +3,7 @@
 
 The OpenPLC runtime UI accepts a program upload while the keyswitch is in
 REMOTE. This pushes a control(io) module that forces the release interlock
-("Freigabe an Mischerei") permanently true and drops the RO2 hard-safety, so
+("Release to Consumers") permanently true and drops the RO2 hard-safety, so
 off-spec DI water is released to the consumers with nothing to stop it.
 
   push_logic_water.py            upload the attacker program
@@ -42,7 +42,7 @@ def control(io):
         io.p401_loop = io.seq_loop
     if not io.uv_hand:
         io.uv401 = io.seq_loop
-    io.freigabe = True                          # release interlock defeated
+    io.release_ok = True                          # release interlock defeated
 '''
 
 GOLDEN = b'''PROGRAM_NAME = "crosscreek_ro_v1 (golden)"
@@ -75,7 +75,7 @@ def control(io):
                   and io.loop_ret_cond_us <= io.cond_limit_us
                   and io.uv_intensity_pct >= io.uv_min_intensity
                   and io.di_tank_pct > 10.0)
-    io.freigabe = quality_ok or io.bypass_release_ilk
+    io.release_ok = quality_ok or io.bypass_release_ilk
 '''
 
 
@@ -98,6 +98,6 @@ if __name__ == "__main__":
         upload(GOLDEN, "golden")
     else:
         upload(ATTACKER, "patched")
-        print("Freigabe is now forced true. Pair with starve-antiscalant or the")
-        print("CIP logic push and off-spec water reaches the Mischerei.")
+        print("Release is now forced true. Pair with starve-antiscalant or the")
+        print("CIP logic push and off-spec water reaches the point of use.")
         print("Prefer ./reset.sh for a full restore.")

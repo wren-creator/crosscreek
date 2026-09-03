@@ -52,11 +52,11 @@ def control(io):
     if not io.uv_hand:
         io.uv401 = io.seq_loop        # UV runs with the loop
 
-    # --- release interlock: "Freigabe an Mischerei" -----------------
+    # --- release interlock: "Release to Consumers" -----------------
     quality_ok = (
         io.ro2_cond_us <= io.cond_limit_us
         and io.loop_ret_cond_us <= io.cond_limit_us
         and io.uv_intensity_pct >= io.uv_min_intensity
         and io.di_tank_pct > 10.0
     )
-    io.freigabe = quality_ok or io.bypass_release_ilk
+    io.release_ok = quality_ok or io.bypass_release_ilk

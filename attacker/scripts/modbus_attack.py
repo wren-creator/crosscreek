@@ -43,7 +43,7 @@ def stop_loop():
     c.write_coil(CO_P401_HAND, True, slave=1)
     c.write_coil(CO_P401_LOOP, False, slave=1)
     print("    3PITC401 loop pressure will bleed to zero; the point-of-use")
-    print("    (Mischerei) loses supply. Watch the power HMI equivalent, PT-401.")
+    print("    the point of use loses supply. Watch 3PITC401 on the water HMI.")
 
 
 def raise_limit():
@@ -51,7 +51,7 @@ def raise_limit():
     print(f"[*] writing HR5 (release conductivity limit) = {us:.2f} uS/cm "
           f"({int(us * 100)})")
     c.write_register(HR_COND_LIMIT, int(us * 100), slave=1)
-    print("    the 'Freigabe an Mischerei' interlock now passes water that is")
+    print("    the release-to-consumers interlock now passes water that is")
     print("    far off-spec. Pair with starve-antiscalant to actually degrade it.")
 
 

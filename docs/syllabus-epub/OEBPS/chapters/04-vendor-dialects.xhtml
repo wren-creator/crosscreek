@@ -8,10 +8,10 @@
 </head>
 <body>
 <h1>Session 4: Vendor Dialects</h1>
-<p>Goal for this session: leave generic Modbus behind and speak the two vendor protocols that run most of the installed base, Siemens S7comm and Allen-Bradley's EtherNet/IP, and use each to do something Modbus could not: halt a CPU, operate a breaker, and replace a control program. This is scenarios 7, 8, and 9.</p>
+<p>Goal for this session: leave generic Modbus behind and speak the two vendor protocols that run most of the installed base, S7comm and Allen-Bradley's EtherNet/IP, and use each to do something Modbus could not: halt a CPU, operate a breaker, and replace a control program. This is scenarios 7, 8, and 9.</p>
 
 <h2>4.1 S7comm and the Substation RTU (Scenario 7)</h2>
-<p>Siemens S7-300 and S7-400 controllers, and the RTUs built on that family, speak a protocol usually called S7comm over TCP port 102. Beyond reading and writing data blocks, it carries PLC-control functions: stop the CPU, start it, change its operating mode. On the older devices, and on plenty of newer ones that were never configured otherwise, none of that requires a password. Industroyer, the malware that opened breakers in Kyiv in 2016, used protocol-native commands like these.</p>
+<p>STEMENS S7-300 and S7-400 controllers, and the RTUs built on that family, speak a protocol usually called S7comm over TCP port 102. Beyond reading and writing data blocks, it carries PLC-control functions: stop the CPU, start it, change its operating mode. On the older devices, and on plenty of newer ones that were never configured otherwise, none of that requires a password. Industroyer, the malware that opened breakers in Kyiv in 2016, used protocol-native commands like these.</p>
 <pre>python3 /opt/scripts/s7_attack.py read
 python3 /opt/scripts/s7_attack.py trip feeder     # open breaker 52-F
 </pre>
@@ -25,19 +25,19 @@ python3 /opt/scripts/s7_attack.py trip feeder     # open breaker 52-F
 <pre>python3 /opt/scripts/cip_attack.py read
 python3 /opt/scripts/cip_attack.py set 15         # write the DoseSetpoint tag
 </pre>
-<p>The tag write drives the NaOH metering rate up; the caustic overdose pushes the RO2 permeate conductivity (2QAH401) past the release limit, and just like the Modbus setpoint attack in Session 3 the release interlock catches it and holds "Freigabe an Mischerei" red. So you take the second step.</p>
+<p>The tag write drives the NaOH metering rate up; the caustic overdose pushes the RO2 permeate conductivity (2QAH401) past the release limit, and just like the Modbus setpoint attack in Session 3 the release interlock catches it and holds "Release to Consumers" red. So you take the second step.</p>
 <pre>python3 /opt/scripts/cip_attack.py logic-push
 # program accepted, rev 2
 # metering pump forced to 100%, downstream interlock bypassed
 </pre>
 <blockquote>Honest scope note. A real Studio 5000 download is not reproducible without Rockwell's tooling, so Cross Creek does not fake the wire format. The dosing controller runs an unauthenticated service that, on this request, swaps its control logic for one that pins the metering pump wide open. What is real here is the lesson: an unauthenticated program-change path on a controller in REMOTE, and the fact that it bumps a <code>LogicRev</code> counter that a historian could alarm on. What is a stand-in is the packet layout.</blockquote>
-<p>With the pushed logic running, the pump is pinned at 100 percent and the loop return conductivity climbs steadily past the limit. The release interlock is now firmly holding Freigabe off, so the water is not being released, yet. Getting it released is the next step.</p>
+<p>With the pushed logic running, the pump is pinned at 100 percent and the loop return conductivity climbs steadily past the limit. The release interlock is now firmly holding Release off, so the water is not being released, yet. Getting it released is the next step.</p>
 
 <h2>4.3 Remove the Release Interlock (Scenario 9)</h2>
 <p>The water PLC runs an OpenPLC-style runtime with a web console on port 8080, published at <code>http://127.0.0.1:8073</code>. Its login is <code>openplc</code> / <code>openplc</code>, which you found in <code>notes.txt</code> in Session 2. While the keyswitch is in REMOTE it will accept a program upload, and the uploaded program becomes the running control logic on the next scan.</p>
 <pre>python3 /opt/scripts/push_logic_water.py
 </pre>
-<p>The script uploads a control program that is the golden one with two changes: "Freigabe an Mischerei" is forced true regardless of conductivity or UV, and the RO2 hard-safety that stops pass 2 on grossly off-spec permeate is gone. Open the console and confirm the running program is now <code>crosscreek_ro_v1_PATCHED</code>. On its own nothing bad happens yet, this is a latent failure. Chain it with the CIP push from 4.2 or the antiscalant starve from Session 3 and there is nothing left in software to stop off-spec demineralised water going to the Mischerei.</p>
+<p>The script uploads a control program that is the golden one with two changes: "Release to Consumers" is forced true regardless of conductivity or UV, and the RO2 hard-safety that stops pass 2 on grossly off-spec permeate is gone. Open the console and confirm the running program is now <code>crosscreek_ro_v1_PATCHED</code>. On its own nothing bad happens yet, this is a latent failure. Chain it with the CIP push from 4.2 or the antiscalant starve from Session 3 and there is nothing left in software to stop off-spec demineralised water going to the point of use.</p>
 <p>Chain 3.5, 4.2, and 4.3 and you have the full outcome: the RO membranes fouled, the caustic dose pinned, the quality gate defeated, and the interlock deleted, with the panel still showing green if you are also blinding it.</p>
 
 <h2>4.4 What You Should Notice</h2>

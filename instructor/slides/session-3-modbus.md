@@ -1,8 +1,8 @@
 # Session 3 — Speaking the Machines' Language (Modbus)
 
 ## Slide 1: The plant
-- Two-pass RO demineralisation plant → DI storage tank → recirculating distribution loop → UV → the "Mischerei"
-- Release interlock ("Freigabe an Mischerei"): only release when RO2 + loop conductivity < limit, UV ok, tank not empty
+- Two-pass RO demineralisation plant → DI storage tank → recirculating distribution loop → UV → the "point of use"
+- Release interlock ("Release to Consumers"): only release when RO2 + loop conductivity < limit, UV ok, tank not empty
 - That interlock is what you attack
 
 ## Slide 2: What Modbus is
@@ -24,7 +24,7 @@
 - The dangerous attack is releasing unsafe water, not stopping a pump
 - `modbus_attack.py raise-limit 5.0` → HR5 = 500 (design limit is 2.0) — harmless on its own
 - `modbus_attack.py starve-antiscalant` → membranes foul → 1QAH301 12→50 µS/cm, 2QAH401 follows past 2
-- With the limit raised, `DI_COND_HIGH_RO2` never trips, Freigabe stays green → off-spec water released
+- With the limit raised, `DI_COND_HIGH_RO2` never trips, Release stays green → off-spec water released
 - **Shape:** setpoint write alone = harmless; membrane foul alone = caught; both together = through. The interlock's hard limit (a program constant) is the last line — Session 4.
 
 ## Slide 6: Blind the operator (scenario 6)

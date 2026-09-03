@@ -19,7 +19,7 @@
 <tr><td>2</td><td><code>recon.py sweep</code> and <code>recon.py creds</code>: confirm the OT layout, log into both HMIs with <code>admin</code> / <code>admin</code></td><td>1, 2</td></tr>
 <tr><td>3</td><td><code>modbus_attack.py raise-limit 5.0</code> then <code>starve-antiscalant</code>: defeat the quality gate and foul the membranes</td><td>3</td></tr>
 <tr><td>4</td><td>Blind the water HMI: hold the input-register mirror at nominal while step 3 runs</td><td>3</td></tr>
-<tr><td>5</td><td><code>push_logic_water.py</code>: replace the water PLC program, force Freigabe true, drop the RO2 hard-safety</td><td>4</td></tr>
+<tr><td>5</td><td><code>push_logic_water.py</code>: replace the water PLC program, force Release true, drop the RO2 hard-safety</td><td>4</td></tr>
 <tr><td>6</td><td><code>cip_attack.py logic-push</code>: pin the NaOH pump at 100%, drive the loop conductivity up</td><td>4</td></tr>
 <tr><td>7</td><td><code>s7_attack.py trip feeder</code> then <code>trip load</code>: island the substation, drive the frequency excursion</td><td>4</td></tr>
 <tr><td>8</td><td><code>s7_attack.py stop</code>: halt the RTU so the operator cannot re-close the breakers</td><td>4</td></tr>
@@ -57,7 +57,7 @@
 <p>Every step. That is the deliverable: proof that a defined, unexotic set of controls breaks a real attack chain at every link.</p>
 
 <h2>7.4 Incident-Response Tabletop</h2>
-<p>Run this as a discussion, 45 minutes, no keyboards. The scenario: at 02:00 the Mischerei phones in, their own incoming conductivity check is reading three times normal and they have stopped a production batch, but the plant's water HMI shows Freigabe green and every value at spec. Walk it through:</p>
+<p>Run this as a discussion, 45 minutes, no keyboards. The scenario: at 02:00 the point of use phones in, their own incoming conductivity check is reading three times normal and they have stopped a production batch, but the plant's water HMI shows Release green and every value at spec. Walk it through:</p>
 <ul>
 <li><strong>Detect.</strong> What tells you this is an incident and not a sensor fault? Who compares the HMI to the historian? What does the IDS show?</li>
 <li><strong>Contain.</strong> Can you isolate OT from IT without stopping the plant? Who has the authority to do that at 02:00, and is that written down?</li>

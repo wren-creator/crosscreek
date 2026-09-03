@@ -23,12 +23,12 @@ defended re-run. All attacker commands are run inside `crosscreek-attacker`
 | B2 | `nc -v 172.30.20.20 5900` | connects; banner says "no authentication configured" |
 | B3 | `python3 /opt/scripts/recon.py engws` | prints `notes.txt` with the controller passwords and `water_plc.st` |
 | B4 | `python3 /opt/scripts/modbus_attack.py stop-loop`; watch water HMI 3PITC401 | loop pressure falls from 3.8 bar toward 0; `DI_LOOP_PRESS_LOW` latches within a few seconds |
-| B5 | `python3 /opt/scripts/modbus_attack.py raise-limit 5.0` then `starve-antiscalant`; watch 1QAH301 / 2QAH401 | RO1 conductivity climbs 12 -> 50 uS/cm over ~30 s, RO2 follows past 2 uS/cm, but `DI_COND_HIGH_RO2` does NOT trip and Freigabe stays green (limit defeated). Without the raised limit, Freigabe drops. |
-| B6 | run B5 (no raised limit) while a `pymodbus` loop re-writes IR 3 and IR 6-9 to nominal | water HMI shows RO2 ~0.5 uS/cm and Freigabe green while the process is actually off-spec |
+| B5 | `python3 /opt/scripts/modbus_attack.py raise-limit 5.0` then `starve-antiscalant`; watch 1QAH301 / 2QAH401 | RO1 conductivity climbs 12 -> 50 uS/cm over ~30 s, RO2 follows past 2 uS/cm, but `DI_COND_HIGH_RO2` does NOT trip and Release stays green (limit defeated). Without the raised limit, Release drops. |
+| B6 | run B5 (no raised limit) while a `pymodbus` loop re-writes IR 3 and IR 6-9 to nominal | water HMI shows RO2 ~0.5 uS/cm and Release green while the process is actually off-spec |
 | B7 | `python3 /opt/scripts/s7_attack.py trip feeder` then `trip load` | power HMI: 52-F and 52-L show OPEN; frequency climbs past 50.5 Hz; excursion alarm |
 | B8 | `python3 /opt/scripts/s7_attack.py stop` | power HMI shows RTU CPU STOP; breaker commands stop taking effect |
-| B9 | `python3 /opt/scripts/cip_attack.py set 15` then `cip_attack.py logic-push` | after logic-push, `cip_attack.py read` shows `LogicForced [1]`, `LogicRev` incremented; RO2 / loop-return conductivity climb past the limit, Freigabe blocked (release the water by chaining B5 or scenario 9) |
-| B10 | `python3 /opt/scripts/push_logic_water.py` | OpenPLC UI (`:8073`) shows program `crosscreek_ro_v1_PATCHED`; Freigabe forced true regardless of conductivity or UV |
+| B9 | `python3 /opt/scripts/cip_attack.py set 15` then `cip_attack.py logic-push` | after logic-push, `cip_attack.py read` shows `LogicForced [1]`, `LogicRev` incremented; RO2 / loop-return conductivity climb past the limit, Release blocked (release the water by chaining B5 or scenario 9) |
+| B10 | `python3 /opt/scripts/push_logic_water.py` | OpenPLC UI (`:8073`) shows program `crosscreek_ro_v1_PATCHED`; Release forced true regardless of conductivity or UV |
 | B11 | `./reset.sh -y` | range returns to golden: setpoints nominal, `crosscreek_ro_v1 (golden)` running, alarms clear |
 
 ## Section C, reset
@@ -36,7 +36,7 @@ defended re-run. All attacker commands are run inside `crosscreek-attacker`
 | # | Command | Pass condition |
 |---|---|---|
 | C1 | `./reset.sh -y` | completes; all containers healthy |
-| C2 | water HMI: RO2 conductivity < 1 uS/cm, loop ~3.8 bar, Freigabe green, no alarms | yes |
+| C2 | water HMI: RO2 conductivity < 1 uS/cm, loop ~3.8 bar, Release green, no alarms | yes |
 | C3 | OpenPLC UI `:8073` program name is `crosscreek_ro_v1 (golden)` | yes |
 | C4 | `curl -s 127.0.0.1:9411` (segmented only) or historian `/recent` | fresh samples, no residual attacker state |
 

@@ -11,7 +11,7 @@
 <p>Goal for this session: talk directly to the water PLC over Modbus/TCP, with no HMI in the loop, and make the RO plant do things it should not. This is scenarios 4, 5, and 6. The tool is a twenty-line Python client. There is no exploit here, because Modbus does not require one.</p>
 
 <h2>3.1 The Plant You Are Attacking</h2>
-<p>The water side of Cross Creek is a two-pass reverse-osmosis demineralisation plant that produces ultrapure water for a downstream user, the "Mischerei." Feed water is dosed with antiscalant and pushed through RO pass 1; the permeate is dosed with a little caustic (NaOH) to knock down dissolved CO2, then polished through RO pass 2; the product goes to a DI storage tank and circulates continuously around a distribution loop with a UV steriliser on it. A control-program interlock, labelled "Freigabe an Mischerei" on the panel, only releases water to the consumer when the RO2 conductivity and the loop-return conductivity are below a limit, the UV intensity is above threshold, and the tank is not empty.</p>
+<p>The water side of Cross Creek is a two-pass reverse-osmosis demineralisation plant that produces ultrapure water for a downstream user, the "point of use." Feed water is dosed with antiscalant and pushed through RO pass 1; the permeate is dosed with a little caustic (NaOH) to knock down dissolved CO2, then polished through RO pass 2; the product goes to a DI storage tank and circulates continuously around a distribution loop with a UV steriliser on it. A control-program interlock, labelled "Release to Consumers" on the panel, only releases water to the consumer when the RO2 conductivity and the loop-return conductivity are below a limit, the UV intensity is above threshold, and the tank is not empty.</p>
 <p>That interlock is the safety you are going to attack.</p>
 
 <h2>3.2 What Modbus Is, and What It Is Not</h2>
@@ -28,7 +28,7 @@
 <pre>python3 /opt/scripts/modbus_attack.py stop-loop
 # writes coil 13 (P401 HAND) = 1, then coil 4 (P401 run) = 0
 </pre>
-<p>Watch 3PITC401 on the water HMI. Loop pressure bleeds from 3.8 bar toward zero in a couple of seconds, and <code>DI_LOOP_PRESS_LOW</code> latches. The Mischerei has lost its water, and it will hold until an operator notices the pump is in HAND and puts it back.</p>
+<p>Watch 3PITC401 on the water HMI. Loop pressure bleeds from 3.8 bar toward zero in a couple of seconds, and <code>DI_LOOP_PRESS_LOW</code> latches. The point of use has lost its water, and it will hold until an operator notices the pump is in HAND and puts it back.</p>
 
 <h2>3.5 Defeat the Quality Gate (Scenario 5)</h2>
 <p>The dangerous attack on a water plant is not stopping a pump. It is releasing water that is not safe. The release interlock compares the measured conductivity against holding register 5. Raise that register and the gate stops meaning anything.</p>
@@ -39,11 +39,11 @@
 <pre>python3 /opt/scripts/modbus_attack.py starve-antiscalant
 # P101 to HAND and stopped, dose rate -> 0
 </pre>
-<p>Watch 1QAH301. Over about thirty seconds the RO1 permeate conductivity climbs from 12 toward 50 uS/cm as the membranes scale, and then 2QAH401, the product conductivity, follows it up past 2 uS/cm. Normally that trips <code>DI_COND_HIGH_RO2</code> and the interlock drops "Freigabe an Mischerei" to red, off-spec water is held. But you raised the limit to 5.0, so the alarm never fires and Freigabe stays green. The plant is now releasing demineralised water that is three times too conductive, and the panel says everything is fine.</p>
+<p>Watch 1QAH301. Over about thirty seconds the RO1 permeate conductivity climbs from 12 toward 50 uS/cm as the membranes scale, and then 2QAH401, the product conductivity, follows it up past 2 uS/cm. Normally that trips <code>DI_COND_HIGH_RO2</code> and the interlock drops "Release to Consumers" to red, off-spec water is held. But you raised the limit to 5.0, so the alarm never fires and Release stays green. The plant is now releasing demineralised water that is three times too conductive, and the panel says everything is fine.</p>
 <p>Note the shape of that: the pure setpoint write, by itself, was harmless. The pure membrane foul, by itself, would have been caught. It took both, and it still left the release interlock's own hard limit (a program constant, not a register) as a last line. Reaching past that is Session 4.</p>
 
 <h2>3.6 Blind the Operator (Scenario 6)</h2>
-<p>Everything above is visible on the HMI. 2QAH401 goes red, Freigabe would normally go red, an attentive operator acts. So the mature version hides itself. The HMI reads input registers 0 through 14. The process simulator writes the real values into holding registers 10 through 22 and the PLC scan loop copies them across. If you write the mirror registers faster than the sim updates them, you control what the operator sees.</p>
+<p>Everything above is visible on the HMI. 2QAH401 goes red, Release would normally go red, an attentive operator acts. So the mature version hides itself. The HMI reads input registers 0 through 14. The process simulator writes the real values into holding registers 10 through 22 and the PLC scan loop copies them across. If you write the mirror registers faster than the sim updates them, you control what the operator sees.</p>
 <pre># sketch: hold RO2 conductivity and the loop values at spec on the HMI
 python3 - &lt;&lt;'PY'
 from pymodbus.client import ModbusTcpClient
@@ -55,7 +55,7 @@ while True:
     time.sleep(0.15)
 PY
 </pre>
-<p>Now run the antiscalant starve from 3.5 without raising the limit. The interlock in the PLC still knows the water is bad and holds Freigabe, but the operator's screen shows 0.55 uS/cm and green, so nobody escalates, and an attacker who is also spoofing the Freigabe coil completes the picture. This is Stuxnet's operator-facing trick in miniature: record normal, replay normal, run the process off-spec behind it.</p>
+<p>Now run the antiscalant starve from 3.5 without raising the limit. The interlock in the PLC still knows the water is bad and holds Release, but the operator's screen shows 0.55 uS/cm and green, so nobody escalates, and an attacker who is also spoofing the Release coil completes the picture. This is Stuxnet's operator-facing trick in miniature: record normal, replay normal, run the process off-spec behind it.</p>
 
 <h2>3.7 What You Should Notice</h2>
 <p>Modbus gave you the plant with no credential and no exploit, and the only thing that saved the water quality was an interlock coded into the PLC program by an engineer who thought about failure, and even that had a register you could turn off. When you get to Session 5 you will not be able to fix Modbus, because Modbus cannot be fixed. You will fix everything around it: who can reach port 502, which setpoints the program will accept, whether the release limit can be written at all, and whether anyone would see a conductivity that climbed faster than a membrane can foul.</p>

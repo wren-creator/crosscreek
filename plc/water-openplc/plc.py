@@ -115,7 +115,7 @@ class IO:
         self.p302_ro2 = bool(co[M.CO_P302_RO2])
         self.p401_loop = bool(co[M.CO_P401_LOOP])
         self.uv401 = bool(co[M.CO_UV401])
-        self.freigabe = bool(co[M.CO_FREIGABE])
+        self.release_ok = bool(co[M.CO_RELEASE])
         self.seq_ro = bool(co[M.CO_SEQ_RO])
         self.seq_loop = bool(co[M.CO_SEQ_LOOP])
         self.seq_cip = bool(co[M.CO_SEQ_CIP])
@@ -138,7 +138,7 @@ class IO:
         wr(1, M.CO_P302_RO2, [int(self.p302_ro2)])
         wr(1, M.CO_P401_LOOP, [int(self.p401_loop)])
         wr(1, M.CO_UV401, [int(self.uv401)])
-        wr(1, M.CO_FREIGABE, [int(self.freigabe)])
+        wr(1, M.CO_RELEASE, [int(self.release_ok)])
         wr(1, M.CO_SEQ_RO, [int(self.seq_ro)])
         wr(1, M.CO_SEQ_LOOP, [int(self.seq_loop)])
 
@@ -202,7 +202,7 @@ def scan_loop():
                    [int(io.p102_feed and io.feed_flow_m3h < 0.5)])
                 wr(2, M.DI_ANTISCALANT_LOW, [int(io.antiscalant_tank_pct < 10.0)])
                 wr(2, M.DI_NAOH_LOW, [int(io.naoh_tank_pct < 10.0)])
-                wr(2, M.DI_RELEASE_BLOCKED, [int(not io.freigabe)])
+                wr(2, M.DI_RELEASE_BLOCKED, [int(not io.release_ok)])
 
             # operator-facing mirror (updates even in STOP)
             hr = rd(3, 0, 24)
@@ -337,7 +337,7 @@ def api_state():
         ),
         release=dict(
             abnahme=bool(co[M.CO_ABNAHME]),
-            freigabe=bool(co[M.CO_FREIGABE]),
+            ok=bool(co[M.CO_RELEASE]),
             bypass_interlock=bool(co[M.CO_BYPASS_RELEASE_ILK]),
         ),
         alarms=dict(

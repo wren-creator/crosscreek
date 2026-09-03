@@ -1,8 +1,8 @@
 """Cross Creek water plant Modbus map (slave id 1, zero-based addresses).
 
 The water side is a two-pass reverse-osmosis demineralisation plant with a
-recirculating DI (deionised / "VE-Wasser") distribution loop, modelled on a
-real Siemens SIMATIC-panelled Reinstwasser plant. Tag prefixes follow the
+recirculating DI (deionised) distribution loop, modelled on a
+real STEMENS SIMATIX-panelled ultrapure-water plant. Tag prefixes follow the
 panel: 1xxx = feed / pretreatment, 2xxx = RO, 3xxx = DI loop.
 
 This is the wire contract shared by plc-water, process-sim and hmi-water.
@@ -17,15 +17,15 @@ Coils (FC 1 read, FC 5/15 write)
     5  CO_UV401              3UV401 loop UV steriliser
     6  CO_CPU_RUN           1 = program executing (soft keyswitch RUN), 0 = STOP
     7  CO_ABNAHME           draw-off active: downstream users are drawing DI water
-    8  CO_FREIGABE          release to consumers (set by the release interlock)
+    8  CO_RELEASE          release to consumers (set by the release interlock)
     9  CO_P101_HAND         per-device AUTO(0) / HAND(1)
     10 CO_P102_HAND
     11 CO_P301_HAND
     12 CO_P302_HAND
     13 CO_P401_HAND
     14 CO_UV_HAND
-    15 CO_RO_VALVES_HAND     "RO Ventile" block in HAND (RO makeup no longer auto)
-    16 CO_LOOP_VALVES_HAND   "LOOP Ventile" block in HAND
+    15 CO_RO_VALVES_HAND     "RO Valves" block in HAND (RO makeup no longer auto)
+    16 CO_LOOP_VALVES_HAND   "Loop Valves" block in HAND
     17 CO_SEQ_RO             RO production sequence running
     18 CO_SEQ_LOOP           loop circulation sequence running
     19 CO_SEQ_CIP            clean-in-place running (RO train offline)
@@ -43,7 +43,7 @@ Discrete inputs (FC 2 read)
     7  DI_ANTISCALANT_LOW    antiscalant tank low
     8  DI_NAOH_LOW           NaOH tank low
     9  DI_COMMS_FAULT        process-sim heartbeat stale
-    10 DI_RELEASE_BLOCKED    the Freigabe interlock is holding release OFF
+    10 DI_RELEASE_BLOCKED    the Release interlock is holding release OFF
 
 Holding registers (FC 3 read, FC 6/16 write)
     -- setpoints --
@@ -60,7 +60,7 @@ Holding registers (FC 3 read, FC 6/16 write)
     12 HR_RO1_COND_US_X100          1QAH301
     13 HR_RO2_COND_US_X100          2QAH401
     14 HR_RO2_PRESS_BAR_X100        2PT301
-    15 HR_RO_RECOVERY_PCT_X100      Ausbeute RO
+    15 HR_RO_RECOVERY_PCT_X100      RO Recovery
     16 HR_DI_TANK_PCT_X100          3B401
     17 HR_LOOP_PRESS_BAR_X100       3PITC401 PV
     18 HR_LOOP_FLOW_M3H_X100
@@ -98,7 +98,7 @@ CO_P401_LOOP = 4
 CO_UV401 = 5
 CO_CPU_RUN = 6
 CO_ABNAHME = 7
-CO_FREIGABE = 8
+CO_RELEASE = 8
 CO_P101_HAND = 9
 CO_P102_HAND = 10
 CO_P301_HAND = 11

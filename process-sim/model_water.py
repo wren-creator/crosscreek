@@ -9,7 +9,7 @@ Steady state, all AUTO, nominal reagents:
   feed ~8 m3/h at ~4.5 bar, RO1 permeate ~12 uS/cm, NaOH inter-pass dosing
   brings RO2 permeate to ~0.5 uS/cm, the DI tank cycles 40-85% as the RO
   sequence duty-cycles, the loop holds ~3.8 bar, UV ~95%, loop return
-  ~0.7 uS/cm. The release interlock (Freigabe) is satisfied.
+  ~0.7 uS/cm. The release interlock is satisfied.
 
 Force something and it walks off:
   * stop the loop pump (3P401)        -> loop pressure bleeds to zero

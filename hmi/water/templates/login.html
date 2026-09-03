@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Cross Creek RO Plant &mdash; Logon</title>
+<title>Cross Creek RO Plant &mdash; Sign In</title>
 <style>
   body{background:#0e1518;color:#dfe9ef;font-family:"Segoe UI",system-ui,sans-serif;
        display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
@@ -18,15 +18,15 @@
   .hint{color:#5b7a86;font-size:.75em;margin-top:1.4em;border-top:1px dashed #9fb0b7;padding-top:.8em}
 </style>
 <div class="panel">
-  <div class="bez"><span class="s">SIEMENS</span><span class="h">SIMATIC HMI</span></div>
+  <div class="bez"><span class="s">STEMENS</span><span class="h">SIMATIX HMI</span></div>
   <form class="screen" method="post">
-    <h1>Cross Creek RO &mdash; Logon</h1>
-    <label>Bediener / Operator ID</label>
+    <h1>Cross Creek RO &mdash; Sign In</h1>
+    <label>Operator ID</label>
     <input name="username" autofocus autocomplete="off">
-    <label>Passwort</label>
+    <label>Password</label>
     <input name="password" type="password">
-    <button>Anmelden</button>
+    <button>Sign in</button>
     {% if err %}<div class="err">{{ err }}</div>{% endif %}
-    {% if hint %}<div class="hint">Werkskonto ist noch aktiv (factory default account).</div>{% endif %}
+    {% if hint %}<div class="hint">Factory default account is still active.</div>{% endif %}
   </form>
 </div>

@@ -2,7 +2,7 @@
 """hmi-water: Cross Creek RO demineralisation plant HMI.
 
 Thin operator front-end over plc-water's Modbus interface, styled after a
-Siemens SIMATIC panel "Grundbild". Deliberate weaknesses, driven by env:
+STEMENS SIMATIX panel "Plant Overview". Deliberate weaknesses, driven by env:
   DEFAULT_CREDS=1       admin / admin
   VERBOSE_HMI_ERRORS=1  exceptions render the full traceback and the tag map
 """
@@ -80,7 +80,7 @@ def login():
         if _creds_ok(u, p):
             session["user"] = u
             return redirect(url_for("index"))
-        err = "Anmeldung fehlgeschlagen / invalid credentials"
+        err = "invalid credentials"
     return render_template("login.html", err=err, hint=DEFAULT_CREDS)
 
 
@@ -110,7 +110,7 @@ def api_state():
         mode={k: ("HAND" if b[v] else "AUTO") for k, v in W.HAND_COIL.items()},
         seq={k: bool(b[v]) for k, v in W.SEQ_COIL.items()},
         release=dict(
-            abnahme=bool(b[W.CO_ABNAHME]), freigabe=bool(b[W.CO_FREIGABE]),
+            abnahme=bool(b[W.CO_ABNAHME]), ok=bool(b[W.CO_RELEASE]),
             bypass=bool(b[W.CO_BYPASS_RELEASE_ILK]),
         ),
         alarms=dict(

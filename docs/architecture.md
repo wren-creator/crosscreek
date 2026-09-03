@@ -99,7 +99,7 @@ defaults to the vulnerable value if `.env` is absent.
 water plant: feed and antiscalant dosing, RO pass 1, NaOH inter-pass dosing,
 RO pass 2, a DI storage tank (3B401), a recirculating distribution loop with a
 circulation pump (3P401) and a UV steriliser (3UV401), and a release interlock
-("Freigabe an Mischerei") that only permits release when RO2 and loop-return
+("Release to Consumers") that only permits release when RO2 and loop-return
 conductivity are below `HR_COND_LIMIT_US`, UV intensity is above threshold, and
 the tank is not empty. `process-sim/model_water.py` models the coupling: cut
 the antiscalant and the membranes foul (RO1 conductivity climbs, RO2 follows);
@@ -124,7 +124,7 @@ alert on; it is not the CIP wire format for a program download.
 10-22 every tick; the PLC scan loop mirrors them to input registers 0-14 for
 the HMI. An attacker on `ot-net` can hold either block at a nominal value
 faster than the sim updates it, so the HMI shows RO2 conductivity at spec and
-Freigabe green while the loop circulates off-spec water. The segmented HMI adds
+Release green while the loop circulates off-spec water. The segmented HMI adds
 a plausibility check: a value that moved faster than the model allows is
 flagged rather than shown.
 

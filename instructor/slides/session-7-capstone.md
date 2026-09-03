@@ -9,7 +9,7 @@
 2. `recon.py sweep` + `creds` — confirm layout, log into both HMIs
 3. `modbus_attack.py raise-limit 5.0` + `starve-antiscalant` — quality gate defeated, membranes foul
 4. blind the water HMI — hold IR mirror at nominal
-5. `push_logic_water.py` — force Freigabe true, drop the RO2 hard-safety
+5. `push_logic_water.py` — force Release true, drop the RO2 hard-safety
 6. `cip_attack.py logic-push` — NaOH pump pinned 100%, loop conductivity climbs
 7. `s7_attack.py trip feeder` + `trip load` — island + frequency excursion
 8. `s7_attack.py stop` — freeze the RTU
