@@ -8,7 +8,7 @@
 ## Slide 2: Do it
 - `recon.py creds` → `admin/admin -> ACCEPTED`
 - Browser → `http://127.0.0.1:8071` → log in → you are an operator
-- Stop the distribution pump, watch pressure fall
+- Take 3P401 to HAND and stop it, watch the loop pressure fall
 
 ## Slide 3: The Oldsmar pattern
 - Feb 2021: operator watched the mouse move; lye setpoint 100 → 11,100 ppm

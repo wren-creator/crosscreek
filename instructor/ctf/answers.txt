@@ -2,8 +2,8 @@
 # match-type: exact (case-insensitive), regex, or one-of
 flag1 | exact  | admin
 flag2 | exact  | notes.txt
-flag3 | exact  | 4.0
-flag4 | exact  | crosscreek_water_v1_PATCHED
+flag3 | exact  | 10.0
+flag4 | exact  | crosscreek_ro_v1_PATCHED
 flag5 | exact  | 2
 flag6 | one-of | 55|55.0
 flag7 | exact  | nonzero

@@ -1,50 +1,62 @@
-"""Golden control program for the Cross Creek water plant.
+"""Golden control program for the Cross Creek RO demineralisation plant.
 
-OpenPLC-style: a single `control(io)` function that the scan loop calls every
-cycle. `io` is a live view of the process. Set the outputs, return nothing.
+OpenPLC-style: one `control(io)` function, called every scan. `io` is a live
+view of the process; set the outputs and return.
 
-Each pump can be in AUTO or HAND. In AUTO the program runs the loop below. In
-HAND the operator drives the pump from the HMI and the program leaves that
-output alone, except for the safety interlocks, which apply in both modes.
+Sequences and equipment can run in AUTO or HAND. In AUTO the program below
+drives them. In HAND the operator drives them from the HMI and the program
+leaves that output alone, except for the safety interlocks, which apply in
+both modes.
 
 This is the known-good logic. `./reset.sh` reloads it. Scenario 9 replaces the
-running copy under /plc/logic/runtime/active.py with an attacker version that
-strips the interlock.
+running copy with an attacker version that strips the release interlock.
 """
 
-PROGRAM_NAME = "crosscreek_water_v1 (golden)"
+PROGRAM_NAME = "crosscreek_ro_v1 (golden)"
 
 
 def control(io):
-    # --- raw water intake: level control with hysteresis ------------------
-    if not io.intake_hand:
-        if io.raw_level_pct <= io.level_low_sp:
-            io.intake_pump = True
-        elif io.raw_level_pct >= io.level_high_sp:
-            io.intake_pump = False
-        # else: hold last state
+    cip = io.seq_cip or io.seq_sanitise
 
-    # High-level interlock. The tank physically overflows above 98%. Unless an
-    # operator has thrown the bypass, force-stop the intake pump here, in AUTO
-    # or HAND, regardless of anything a remote client wrote to the coil.
-    if io.raw_level_pct >= 98.0 and not io.bypass_interlock:
-        io.intake_pump = False
+    # --- RO makeup: run the RO sequence on DI tank level -------------------
+    if not io.ro_valves_hand:
+        if io.di_tank_pct <= io.tank_lo_sp:
+            io.seq_ro = True
+        elif io.di_tank_pct >= io.tank_hi_sp:
+            io.seq_ro = False
+        if cip:                       # never make product during a clean
+            io.seq_ro = False
 
-    # --- chlorine dosing: dose only when water is actually moving ---------
-    if not io.dose_hand:
-        io.dose_enable = io.flow_gpm > 1.0
+    # --- feed / pretreatment -------------------------------------------
+    if not io.p102_hand:
+        io.p102_feed = io.seq_ro and not cip
+    if not io.p101_hand:
+        # antiscalant doses whenever feed water is flowing and there is reagent
+        io.p101_antiscalant = io.p102_feed and io.antiscalant_tank_pct > 2.0
 
-    # Overdose interlock: cut dosing hard if the residual runs away.
-    if io.chlorine_ppm >= io.safe_max_ppm:
-        io.dose_enable = False
+    # --- RO passes ---------------------------------------------------
+    if not io.p301_hand:
+        io.p301_ro1 = io.p102_feed and io.feed_press_bar > 1.0
+    if not io.p302_hand:
+        io.p302_ro2 = io.p301_ro1 and io.ro1_cond_us < 50.0
 
-    # --- distribution: hold header pressure in a band -------------------
-    if not io.dist_hand:
-        if io.dist_press_psi < io.dist_press_target - 3:
-            io.dist_pump = True
-        elif io.dist_press_psi > io.dist_press_target + 3:
-            io.dist_pump = False
+    # Hard safety: do not push grossly off-spec permeate toward the tank.
+    if io.ro2_cond_us > io.cond_hard_limit and not io.bypass_release_ilk:
+        io.p302_ro2 = False
 
-    # Do not run the high-service pump against an empty clearwell.
-    if io.treated_level_pct < 10.0:
-        io.dist_pump = False
+    # --- DI loop ---------------------------------------------------
+    if not io.loop_valves_hand:
+        io.seq_loop = True            # the loop circulates continuously
+    if not io.p401_hand:
+        io.p401_loop = io.seq_loop
+    if not io.uv_hand:
+        io.uv401 = io.seq_loop        # UV runs with the loop
+
+    # --- release interlock: "Freigabe an Mischerei" -----------------
+    quality_ok = (
+        io.ro2_cond_us <= io.cond_limit_us
+        and io.loop_ret_cond_us <= io.cond_limit_us
+        and io.uv_intensity_pct >= io.uv_min_intensity
+        and io.di_tank_pct > 10.0
+    )
+    io.freigabe = quality_ok or io.bypass_release_ilk

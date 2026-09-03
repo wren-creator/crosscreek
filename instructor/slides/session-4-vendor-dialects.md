@@ -8,21 +8,21 @@
 
 ## Slide 2: EtherNet/IP + CIP (scenario 8)
 - Allen-Bradley, TCP 44818. Tag read/write unauthenticated. Keyswitch REMOTE = downloads allowed.
-- `cip_attack.py set 15` → metering rate up → **interlock still catches it near 4 ppm**
-- `cip_attack.py logic-push` → LogicForced, pump pinned 100%, interlock bypassed → residual unbounded
+- `cip_attack.py set 15` → NaOH overdose → RO2 conductivity past the limit → **interlock still holds Freigabe**
+- `cip_attack.py logic-push` → LogicForced, NaOH pump pinned 100%, loop conductivity climbs; release still needs scenario 5 or 9
 
 ## Slide 3: Honest scope note
 - Real Studio 5000 download can't be emulated without Rockwell tooling
 - The range runs an unauthenticated service that swaps the logic and bumps `LogicRev`
 - Real: the concept + the detection. Stand-in: the wire format.
 
-## Slide 4: Replace the water PLC program (scenario 9)
+## Slide 4: Remove the release interlock (scenario 9)
 - OpenPLC-style runtime, `:8073`, login `openplc/openplc` (from `notes.txt`)
-- `push_logic_water.py` uploads golden-minus-the-98%-interlock
-- Intake pump never stops → raw tank to 100% → overflow, no software left to stop it
+- `push_logic_water.py` uploads golden-minus-the-release-interlock (Freigabe forced true) and minus the RO2 hard-safety
+- On its own: latent — the safety is gone but nothing bad yet
 
-## Slide 5: Chain 8b + 9
-- Tank overflowing + contaminated water to the main + every interlock bypassed or deleted
+## Slide 5: Chain 3.5 + 8b + 9
+- Membranes fouled + caustic pinned + quality gate raised + interlock deleted → off-spec DI water to the Mischerei
 - This is the on-the-news outcome
 
 ## Slide 6: What you should notice

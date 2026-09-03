@@ -22,22 +22,22 @@ defended re-run. All attacker commands are run inside `crosscreek-attacker`
 | B1 | `python3 /opt/scripts/recon.py sweep` then `recon.py creds` | sweep lists 172.30.40.10/.11/.20/.21/.22; creds prints `admin/admin -> ACCEPTED` for both HMIs |
 | B2 | `nc -v 172.30.20.20 5900` | connects; banner says "no authentication configured" |
 | B3 | `python3 /opt/scripts/recon.py engws` | prints `notes.txt` with the controller passwords and `water_plc.st` |
-| B4 | `python3 /opt/scripts/modbus_attack.py stop-dist`; watch water HMI PT-401 | header pressure falls toward 0; `press_low` alarm latches within ~60 s |
-| B5 | `python3 /opt/scripts/modbus_attack.py overdose 15`; watch AIT-301 | chlorine climbs to ~4 ppm; `overdose` alarm flags, then the interlock pulls it back |
-| B6 | run B4 while a `pymodbus` loop re-writes IR 0-4 to nominal | water HMI reads healthy while pressure is actually collapsing |
+| B4 | `python3 /opt/scripts/modbus_attack.py stop-loop`; watch water HMI 3PITC401 | loop pressure falls from 3.8 bar toward 0; `DI_LOOP_PRESS_LOW` latches within a few seconds |
+| B5 | `python3 /opt/scripts/modbus_attack.py raise-limit 5.0` then `starve-antiscalant`; watch 1QAH301 / 2QAH401 | RO1 conductivity climbs 12 -> 50 uS/cm over ~30 s, RO2 follows past 2 uS/cm, but `DI_COND_HIGH_RO2` does NOT trip and Freigabe stays green (limit defeated). Without the raised limit, Freigabe drops. |
+| B6 | run B5 (no raised limit) while a `pymodbus` loop re-writes IR 3 and IR 6-9 to nominal | water HMI shows RO2 ~0.5 uS/cm and Freigabe green while the process is actually off-spec |
 | B7 | `python3 /opt/scripts/s7_attack.py trip feeder` then `trip load` | power HMI: 52-F and 52-L show OPEN; frequency climbs past 50.5 Hz; excursion alarm |
 | B8 | `python3 /opt/scripts/s7_attack.py stop` | power HMI shows RTU CPU STOP; breaker commands stop taking effect |
-| B9 | `python3 /opt/scripts/cip_attack.py set 15` then `cip_attack.py logic-push` | after logic-push, `cip_attack.py read` shows `LogicForced [1]`, `LogicRev` incremented; chlorine runs past 4 ppm toward ~20 |
-| B10 | `python3 /opt/scripts/push_logic_water.py` | OpenPLC UI (`:8073`) shows program `crosscreek_water_v1_PATCHED`; raw tank LT-101 climbs to 100% |
-| B11 | `./reset.sh -y` | range returns to golden: setpoints nominal, golden program running, alarms clear |
+| B9 | `python3 /opt/scripts/cip_attack.py set 15` then `cip_attack.py logic-push` | after logic-push, `cip_attack.py read` shows `LogicForced [1]`, `LogicRev` incremented; RO2 / loop-return conductivity climb past the limit, Freigabe blocked (release the water by chaining B5 or scenario 9) |
+| B10 | `python3 /opt/scripts/push_logic_water.py` | OpenPLC UI (`:8073`) shows program `crosscreek_ro_v1_PATCHED`; Freigabe forced true regardless of conductivity or UV |
+| B11 | `./reset.sh -y` | range returns to golden: setpoints nominal, `crosscreek_ro_v1 (golden)` running, alarms clear |
 
 ## Section C, reset
 
 | # | Command | Pass condition |
 |---|---|---|
 | C1 | `./reset.sh -y` | completes; all containers healthy |
-| C2 | water HMI: chlorine 2.5 ppm setpoint, header ~60 psi, no alarms | yes |
-| C3 | OpenPLC UI `:8073` program name is `crosscreek_water_v1 (golden)` | yes |
+| C2 | water HMI: RO2 conductivity < 1 uS/cm, loop ~3.8 bar, Freigabe green, no alarms | yes |
+| C3 | OpenPLC UI `:8073` program name is `crosscreek_ro_v1 (golden)` | yes |
 | C4 | `curl -s 127.0.0.1:9411` (segmented only) or historian `/recent` | fresh samples, no residual attacker state |
 
 ## Section D, defended side (`./start.sh --segmented`)
@@ -50,7 +50,7 @@ defended re-run. All attacker commands are run inside `crosscreek-attacker`
 | D4 | `docker exec crosscreek-router-fw nft list ruleset \| grep CC-FW-DROP` | drop counter is climbing |
 | D5 | `curl -s http://127.0.0.1:9411/` | one alert per attempt above ("edge host reaching a PLC protocol port", etc.) |
 | D6 | from `crosscreek-eng-ws`: reach a PLC only via the jump host (`ssh jumphost` then to OT) | direct eng-ws -> PLC is dropped; via jump host works |
-| D7 | on the water PLC, `MODBUS_WRITE_OPEN=0` clamps an out-of-range dose setpoint write | setpoint written by a test client is pulled back to the safe maximum |
+| D7 | on the water PLC, `MODBUS_WRITE_OPEN=0`, write `HR_COND_LIMIT_US` = 5000 (50 uS/cm) from a test client | the PLC clamps it back to 500 (5.00 uS/cm) within one scan |
 
 ## Section E, ebook
 

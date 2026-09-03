@@ -2,13 +2,13 @@
 """process-sim: drives the physical model from the PLC outputs.
 
 Three field loops:
-  * water   -> plc-water over Modbus/TCP
-  * power   -> plc-power over S7comm
-  * dosing  -> plc-dosing over EtherNet/IP (CIP)
+  * water   -> plc-water over Modbus/TCP  (RO demineralisation plant)
+  * power   -> plc-power over S7comm      (substation bus)
+  * dosing  -> plc-dosing over EtherNet/IP (CIP)  (NaOH inter-pass dosing)
 
 The dosing loop reads the metering rate and logic state from the CIP controller
-and feeds the water model, so tampering with the Modbus setpoint, the CIP
-metering rate, or the CIP control logic all show up as chlorine.
+and feeds the RO model, so tampering with the water PLC's setpoints, the CIP
+metering rate, or the CIP control logic all show up as conductivity.
 """
 import os
 import socket
@@ -24,7 +24,7 @@ from pymodbus.client import ModbusTcpClient
 import s7map as S
 import watermap as W
 from model_power import PowerState
-from model_water import WaterState
+from model_water import RoWaterState
 
 WATER_HOST = os.environ.get("PLC_WATER_HOST", "172.30.41.10")
 WATER_PORT = int(os.environ.get("PLC_WATER_PORT", "502"))
@@ -32,52 +32,61 @@ POWER_HOST = os.environ.get("PLC_POWER_HOST", "172.30.41.12")
 DOSING_HOST = os.environ.get("PLC_DOSING_HOST", "172.30.41.11")
 TICK = float(os.environ.get("TICK_SECONDS", "1.0"))
 
-# nominal metering-pump output that holds the design 2.5 ppm residual
-NOMINAL_DOSE_RATE = 55.0
-
-water = WaterState()
+water = RoWaterState()
 power = PowerState()
 _hb = 0
 _last_ok = {"water": 0.0, "power": 0.0, "dosing": 0.0}
-_dose = {"rate_pct": NOMINAL_DOSE_RATE, "forced": False, "rev": 1}
+# NaOH dose commanded by the CIP controller: L/h and whether the logic is forced
+_dose = {"naoh_lh": 4.0, "forced": False, "rev": 1}
 
 
-# --- water -------------------------------------------------------------
+# --- water: RO plant over Modbus ------------------------------------------
 def water_tick(client, dt):
     global _hb
-    co = client.read_coils(0, 8, slave=1)
-    hr = client.read_holding_registers(0, 20, slave=1)
+    co = client.read_coils(0, 24, slave=1)
+    hr = client.read_holding_registers(0, 24, slave=1)
     if co.isError() or hr.isError():
         return
-    cpu_run = bool(co.bits[W.CO_CPU_RUN])
-    sp_modbus = hr.registers[W.HR_DOSE_SETPOINT_PPM_X100] / 100.0
-    coil_enable = bool(co.bits[W.CO_DOSE_ENABLE]) and cpu_run
-
-    if _dose["forced"]:
-        # CIP logic push: metering pump wide open, downstream interlock bypassed
-        dosing_active, dose_target = True, 20.0
-    elif coil_enable:
-        scale = _dose["rate_pct"] / NOMINAL_DOSE_RATE if _dose["rate_pct"] > 0 else 1.0
-        dosing_active, dose_target = True, sp_modbus * scale
-    else:
-        dosing_active, dose_target = False, 0.0
+    b = co.bits
+    loop_press_sp = hr.registers[W.HR_LOOP_PRESS_SP_BAR_X100] / 100.0
+    antiscalant_rate = hr.registers[W.HR_ANTISCALANT_RATE_LH_X10] / 10.0
+    # the CIP controller owns the NaOH rate; fall back to the PLC setpoint
+    naoh_rate = _dose["naoh_lh"] if _last_ok["dosing"] else \
+        hr.registers[W.HR_NAOH_RATE_LH_X10] / 10.0
 
     water.step(
         dt,
-        intake_pump=bool(co.bits[W.CO_INTAKE_PUMP]) and cpu_run,
-        dist_pump=bool(co.bits[W.CO_DIST_PUMP]) and cpu_run,
-        dosing_active=dosing_active,
-        dose_target_ppm=dose_target,
+        p102_feed=bool(b[W.CO_P102_FEED]),
+        p101_antiscalant=bool(b[W.CO_P101_ANTISCALANT]),
+        p301_ro1=bool(b[W.CO_P301_RO1_HP]),
+        p302_ro2=bool(b[W.CO_P302_RO2]),
+        p401_loop=bool(b[W.CO_P401_LOOP]),
+        uv401=bool(b[W.CO_UV401]),
+        seq_cip=bool(b[W.CO_SEQ_CIP]) or bool(b[W.CO_SEQ_SANITISE]),
+        abnahme=bool(b[W.CO_ABNAHME]),
+        loop_press_sp=loop_press_sp,
+        antiscalant_rate_lh=antiscalant_rate,
+        naoh_rate_lh=naoh_rate,
+        contaminant_us=4.0 if _dose["forced"] else 0.0,
     )
+
     _hb = (_hb + 1) & 0xFFFF
     client.write_registers(
-        W.HR_RAW_TANK_LEVEL_PCT_X100,
+        W.HR_FEED_FLOW_M3H_X100,
         [
-            int(water.raw_level_pct * 100),
-            int(water.treated_level_pct * 100),
-            int(water.chlorine_ppm * 100),
-            int(water.header_psi * 100),
-            int(water.flow_gpm * 10),
+            int(water.feed_flow_m3h * 100),
+            int(water.feed_press_bar * 100),
+            int(water.ro1_cond_us * 100),
+            int(water.ro2_cond_us * 100),
+            int(water.ro2_press_bar * 100),
+            int(water.ro_recovery_pct * 100),
+            int(water.di_tank_pct * 100),
+            int(water.loop_press_bar * 100),
+            int(water.loop_flow_m3h * 100),
+            int(water.loop_ret_cond_us * 100),
+            int(water.antiscalant_tank_pct * 100),
+            int(water.naoh_tank_pct * 100),
+            int(water.uv_intensity_pct * 100),
             _hb,
         ],
         slave=1,
@@ -98,7 +107,7 @@ def water_loop():
         time.sleep(max(0.0, TICK - (time.time() - t0)))
 
 
-# --- dosing (CIP) ----------------------------------------------------
+# --- dosing (CIP): NaOH inter-pass metering ------------------------------
 def dosing_loop():
     ip = socket.gethostbyname(DOSING_HOST)
     while True:
@@ -106,13 +115,13 @@ def dosing_loop():
         try:
             with enip_client.connector(host=ip, port=44818, timeout=3) as conn:
                 ops = enip_client.parse_operations([
-                    f"FlowFeedback=(REAL){water.flow_gpm}",
+                    f"FlowFeedback=(REAL){water.feed_flow_m3h}",
                     "DoseRate", "LogicForced", "LogicRev",
                 ])
                 results = list(conn.pipeline(operations=ops, depth=1))
             vals = [val for _, _, _, _, sts, val in results]
-            # vals: [write_ok, [DoseRate], [LogicForced], [LogicRev]]
-            _dose["rate_pct"] = float(vals[1][0])
+            rate_pct = float(vals[1][0])            # metering-pump output %
+            _dose["naoh_lh"] = rate_pct / 100.0 * 8.0
             _dose["forced"] = bool(vals[2][0])
             _dose["rev"] = int(vals[3][0])
             _last_ok["dosing"] = time.time()
@@ -175,14 +184,18 @@ def state():
     return jsonify(
         heartbeat=_hb,
         water=dict(
-            raw_level_pct=round(water.raw_level_pct, 2),
-            treated_level_pct=round(water.treated_level_pct, 2),
-            chlorine_ppm=round(water.chlorine_ppm, 3),
-            header_psi=round(water.header_psi, 2),
-            flow_gpm=round(water.flow_gpm, 1),
+            feed_flow_m3h=round(water.feed_flow_m3h, 2),
+            ro1_cond_us=round(water.ro1_cond_us, 2),
+            ro2_cond_us=round(water.ro2_cond_us, 3),
+            ro_recovery_pct=round(water.ro_recovery_pct, 1),
+            di_tank_pct=round(water.di_tank_pct, 1),
+            loop_press_bar=round(water.loop_press_bar, 2),
+            loop_ret_cond_us=round(water.loop_ret_cond_us, 3),
+            uv_intensity_pct=round(water.uv_intensity_pct, 1),
+            fouling=round(water.fouling, 3),
         ),
         dosing=dict(
-            rate_pct=round(_dose["rate_pct"], 1),
+            naoh_lh=round(_dose["naoh_lh"], 2),
             logic_forced=_dose["forced"],
             logic_rev=_dose["rev"],
         ),

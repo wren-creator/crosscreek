@@ -5,13 +5,16 @@ edition). This file is the teaching notes around it.
 
 ## The one thing students get wrong
 
-Scenarios 5 and 8a (setpoint / tag tamper) are **contained by the golden PLC
-logic**. The overdose interlock cuts the metering pump near 4 ppm. Students
-watch chlorine climb, see it stop, and either think they failed or think they
-succeeded at poisoning the water. Neither. The lesson is that a *well-written
-control program is itself a control*, and the dangerous attack is the one that
-removes it: scenario 9 (replace the water PLC program) or 8b (CIP logic push).
-Drive this point home in the Session 4 debrief.
+Scenario 5 in isolation (raise the conductivity limit) and scenario 8a (CIP
+NaOH tamper) are **contained by the golden PLC logic**. The release interlock
+holds "Freigabe an Mischerei" off whenever the measured conductivity is over
+the limit, and there is a hard limit that is a program constant, not a
+register. Students raise the limit, see nothing happen, and either think they
+failed or think they won. Neither. The lesson is that a *well-written control
+program is itself a control*, and the attack that actually releases off-spec
+water is the one that removes it: scenario 9 (swap the program so Freigabe is
+forced true) plus a quality degradation (scenario 5's antiscalant starve, or
+8b's CIP logic push). Drive this point home in the Session 4 debrief.
 
 ## Session-by-session emphasis
 

@@ -46,12 +46,14 @@ def poll_loop():
         try:
             if not mb.connected:
                 mb.connect()
-            ir = mb.read_input_registers(0, 6, slave=1)
+            ir = mb.read_input_registers(0, 16, slave=1)
             if not ir.isError():
+                # RO plant input registers: 3 = RO2 conductivity, 6 = DI tank,
+                # 7 = loop pressure (see plc-water/mapfile.py)
                 rows += [
-                    (now, "water.raw_level_pct", ir.registers[0] / 100.0),
-                    (now, "water.chlorine_ppm", ir.registers[2] / 100.0),
-                    (now, "water.header_psi", ir.registers[3] / 100.0),
+                    (now, "water.ro2_cond_us", ir.registers[3] / 100.0),
+                    (now, "water.di_tank_pct", ir.registers[6] / 100.0),
+                    (now, "water.loop_press_bar", ir.registers[7] / 100.0),
                 ]
         except Exception as exc:
             print(f"[historian] modbus poll: {exc}")

@@ -15,15 +15,18 @@ topology you switch on to close every one of them.
 
 ## Overview
 
-One `docker-compose.yml` stands up a small municipal utility: a three-stage
-water plant (raw intake, chlorine dosing, distribution pressure) and a
-single-bus power substation, driven by three simulated controllers that speak
-real protocols, Modbus/TCP, EtherNet/IP (CIP), and Siemens S7comm. A Python
-process simulator plays the part of the physical world: open a valve and the
-chlorine rises, stop a pump and the tower drains. Two web HMIs show operators a
-P&ID and a single-line diagram. A firewall container sits on the boundary
-between the enterprise, DMZ, and OT segments. An attacker workstation sits on a
-hostile "edge" network with no route off the lab.
+One `docker-compose.yml` stands up a small utility: a two-pass reverse-osmosis
+demineralisation plant with a recirculating DI distribution loop (feed and
+antiscalant, RO1/RO2 with NaOH inter-pass dosing, a DI storage tank, a UV
+steriliser, a release interlock) and a single-bus power substation, driven by
+three simulated controllers that speak real protocols, Modbus/TCP, EtherNet/IP
+(CIP), and Siemens S7comm. A Python process simulator plays the part of the
+physical world: cut the antiscalant and the membranes foul, stop the loop pump
+and the pressure bleeds out, tamper the conductivity limit and off-spec water
+is released. The water HMI is styled after a Siemens SIMATIC panel "Grundbild";
+the power HMI is a single-line diagram. A firewall container sits on the
+boundary between the enterprise, DMZ, and OT segments. An attacker workstation
+sits on a hostile "edge" network with no route off the lab.
 
 The default (flat) topology is the *how the attacks work* half: the boundary
 forwards freely and every weakness is on. Run `./start.sh --segmented` for the
@@ -74,11 +77,11 @@ docker exec -it crosscreek-attacker bash
 |---|---|
 | `docker-compose.yml` | the range, flat topology: six segments, `127.0.0.1` bindings, weaknesses on |
 | `docker-compose.segmented.yml` | override that applies the defended topology |
-| `plc/water-openplc/` | OpenPLC runtime, water intake + distribution logic, Modbus/TCP |
-| `plc/dosing-enip/` | Allen-Bradley-style dosing controller, EtherNet/IP (CIP) |
+| `plc/water-openplc/` | OpenPLC runtime, the RO demineralisation plant logic, Modbus/TCP |
+| `plc/dosing-enip/` | Allen-Bradley-style NaOH dosing controller, EtherNet/IP (CIP) |
 | `plc/power-s7/` | Siemens-style substation RTU, S7comm |
-| `process-sim/` | the physics: tank levels, chlorine ppm, bus frequency, breaker state |
-| `hmi/water/` `hmi/power/` | the two operator screens (Flask + SVG) |
+| `process-sim/` | the physics: RO conductivity and recovery, DI tank and loop, bus frequency, breaker state |
+| `hmi/water/` `hmi/power/` | operator screens: a SIMATIC-style Grundbild and a single-line diagram (Flask + SVG) |
 | `eng-ws/` | engineering workstation, holds PLC project files and creds: the pivot box |
 | `historian/` | data historian in the DMZ, one-way replication in segmented mode |
 | `net/router-fw/` | the boundary firewall, `flat` and `segmented` nftables rulesets |
@@ -115,15 +118,17 @@ mapped to MITRE ATT&CK for ICS:
   (Aliquippa, 2023), an unauthenticated remote-access service to the OT LAN
   (Oldsmar, 2021), and an engineering workstation reachable from the enterprise
   net that holds project files and PLC credentials.
-- **Protocol abuse** (3): unauthenticated Modbus coil writes that stop the
-  distribution pump (FrostyGoop, Lviv, 2024), holding-register setpoint
-  tampering that overdoses chlorine (Oldsmar), and false-data injection that
-  blinds the HMI while the process runs away.
-- **Vendor dialects** (2): S7comm stop-CPU and mode change against the
+- **Protocol abuse** (3): an unauthenticated Modbus write that stops the DI
+  loop circulation pump (FrostyGoop, Lviv, 2024), a holding-register write that
+  raises the release conductivity limit so off-spec water passes the quality
+  gate (Oldsmar, 2021), and false-data injection that blinds the HMI while the
+  process runs away.
+- **Vendor dialects** (2): S7comm stop-CPU and breaker trip against the
   substation RTU, and CIP tag writes plus an unauthenticated logic push to the
-  dosing controller.
-- **Impact and persistence** (2): modified ladder logic that ignores the level
-  sensor and holds the intake pump on, and a wiper-style HMI config clobber.
+  NaOH dosing controller.
+- **Impact and persistence** (2): a modified control program that forces the
+  "Freigabe an Mischerei" release interlock permanently on, and a wiper-style
+  HMI config clobber.
 
 Trainees work from `docs/scenarios-trainee.md`. Instructors hold
 `docs/scenarios.md`, which adds the exact exploit, the physical consequence in

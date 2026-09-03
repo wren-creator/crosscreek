@@ -68,41 +68,42 @@ python3 /opt/scripts/recon.py engws       # dumps notes.txt and water_plc.st
 
 ---
 
-## Group B, protocol abuse (Modbus/TCP against plc-water)
+## Group B, protocol abuse (Modbus/TCP against plc-water, the RO plant)
 
-### 4. Unauthenticated coil / register write stops distribution
-**Where:** `plc-water` 172.30.40.20:502
+### 4. Unauthenticated write stops the DI distribution loop
+**Where:** `plc-water` 172.30.40.20:502, coil 4 (3P401 loop circulation pump)
 **Real-world parallel:** FrostyGoop, Lviv, Ukraine, January 2024. Malware sent plain Modbus/TCP commands to ENCO controllers and knocked out heat to about 600 apartment buildings for two days.
 **Vulnerability:** Modbus/TCP has no authentication, no session, and no integrity check. Any host that can open port 502 can read and write every coil and register.
-**MITRE ATT&CK for ICS:** T0855 Unauthorized Command Message, T0836 Modify Parameter, T0831 Manipulation of Control
+**MITRE ATT&CK for ICS:** T0855 Unauthorized Command Message, T0831 Manipulation of Control, T0813 Denial of Control
 **Confirm / exploit with:**
 ```bash
 python3 /opt/scripts/modbus_attack.py enum         # read everything
-python3 /opt/scripts/modbus_attack.py stop-dist    # HR1 (pressure target) -> 5 psi
+python3 /opt/scripts/modbus_attack.py stop-loop    # 3P401 -> HAND, then STOP
 ```
-**Physical consequence in the sim:** the control loop now holds the high-service pump off. Header pressure (PT-401) bleeds from 60 psi toward zero at about 1 psi/s; the `press_low` alarm latches within a minute. The town loses pressure.
-**Fix:** Modbus cannot defend itself, so wrap it. Put the PLC on a segment the enterprise and internet cannot route to; allow port 502 only from the HMI and the historian (nftables conduit and the PLC-side `HMI_ALLOWLIST`, both in the segmented topology); validate commanded setpoints in the PLC program against a safe range. CISA CPG 2.F, 5.A (network segmentation); ISA/IEC 62443 conduit filtering.
+**Physical consequence in the sim:** the DI loop circulation pump stops. Loop pressure (3PITC401) bleeds from 3.8 bar toward zero at about 1.5 bar/s; `DI_LOOP_PRESS_LOW` latches within a couple of seconds. The point-of-use (the "Mischerei") loses supply.
+**Fix:** Modbus cannot defend itself, so wrap it. Put the PLC on a segment the enterprise and internet cannot route to; allow port 502 only from the HMI and the historian (nftables conduit and the PLC-side `HMI_ALLOWLIST`, both in the segmented topology); alarm on a HAND transition at the historian. CISA CPG 2.F, 5.A (network segmentation); ISA/IEC 62443 conduit filtering.
 
-### 5. Holding-register setpoint tampering, chlorine overdose
-**Where:** `plc-water` 172.30.40.20:502, holding register 0 (dose setpoint, ppm x100)
-**Real-world parallel:** Oldsmar again: the setpoint change itself was the attack.
-**Vulnerability:** the chlorine dose setpoint is a writable holding register with no range check on the write.
-**MITRE ATT&CK for ICS:** T0836 Modify Parameter
+### 5. Setpoint tampering: raise the release conductivity limit
+**Where:** `plc-water` 172.30.40.20:502, holding register 5 (`HR_COND_LIMIT_US`, x100)
+**Real-world parallel:** Oldsmar, February 2021: the setpoint change itself was the attack (the sodium hydroxide setpoint went from ~100 to ~11,100 ppm).
+**Vulnerability:** the conductivity limit that gates "Freigabe an Mischerei" (release to the consumers) is a writable holding register with no range check.
+**MITRE ATT&CK for ICS:** T0836 Modify Parameter, T0806 Brute Force I/O (n/a), T0839 Module Firmware (n/a)
 **Confirm / exploit with:**
 ```bash
-python3 /opt/scripts/modbus_attack.py overdose 15     # write HR0 = 1500
+python3 /opt/scripts/modbus_attack.py raise-limit 5.0    # HR5 -> 500 (5.00 uS/cm)
+python3 /opt/scripts/modbus_attack.py starve-antiscalant # foul the membranes to make it matter
 ```
-**Physical consequence in the sim:** the residual (AIT-301) chases the setpoint upward. It reaches ~4 ppm, at which point the golden program's overdose interlock cuts the metering pump and the residual falls back. The `overdose` alarm flags on the HMI. On its own this attack is contained by the PLC logic; reaching the tap needs scenario 9.
-**Fix:** range-check the setpoint in the PLC program (the segmented build clamps HR0 to a safe maximum when `MODBUS_WRITE_OPEN=0`), keep the write off-limits to non-HMI sources, and alarm on out-of-band setpoint changes at the historian. CISA CPG 2.F; ISA/IEC 62443 defensive coding.
+**Physical consequence in the sim:** on its own the raised limit changes nothing visible. Combined with the antiscalant starve, the RO membranes foul (1QAH301 climbs 12 -> 50 uS/cm over ~30 s, then 2QAH401 follows past 2 uS/cm), but because the limit is now 5.0, `DI_COND_HIGH_RO2` never trips and Freigabe stays true. Off-spec DI water is released. Without the raised limit, the interlock catches the degradation and holds Freigabe off, this attack is contained by the PLC logic.
+**Fix:** range-check the setpoint in the PLC program (the segmented build clamps HR5 to 0.50-5.00 uS/cm... and the *hard* limit that stops RO pass 2 is a program constant, not a register); keep the write off-limits to non-HMI sources; alarm on any change to a release-critical setpoint at the historian. CISA CPG 2.F; ISA/IEC 62443 defensive coding.
 
 ### 6. False-data injection / HMI blinding
 **Where:** the path between `process-sim`, `plc-water` and `hmi-water`
 **Real-world parallel:** Stuxnet recorded normal process values and replayed them to operators while the centrifuges were driven to failure.
 **Vulnerability:** the HMI trusts whatever the input registers say. A host on the OT network can hold the mirror registers at a nominal value while the process runs away, or feed the operator a frozen picture.
 **MITRE ATT&CK for ICS:** T0856 Spoof Reporting Message, T0832 Manipulation of View, T0815 Denial of View
-**Confirm / exploit with:** from the attacker box, repeatedly write the input-register mirror (IR 0-4) or the field-I/O block (HR 10-14) to hold nominal values while running scenario 4 or 5. A tight `pymodbus` loop is the whole exploit.
-**Physical consequence in the sim:** the HMI shows a healthy plant while pressure collapses or chlorine climbs. The operator has no reason to act.
-**Fix:** cross-check. Compare the HMI's values against an independent read (the historian, a second sensor path), alarm on divergence, and rate-limit / alarm on implausible jumps in the PLC program. The segmented HMI adds a plausibility check that flags a value that moved faster than physics allows. CISA CPG 3.A (log collection and detection); ISA/IEC 62443 integrity monitoring.
+**Confirm / exploit with:** from the attacker box, repeatedly write the input-register mirror (IR 0-15) or the field-I/O block (HR 10-22) to hold nominal values while running scenario 4 or 5. A tight `pymodbus` loop is the whole exploit.
+**Physical consequence in the sim:** the HMI shows RO2 conductivity at 0.5 uS/cm and Freigabe green while the loop is actually circulating off-spec water. The operator has no reason to act.
+**Fix:** cross-check. Compare the HMI's values against an independent read (the historian, a second conductivity probe), alarm on divergence, and rate-limit / alarm on implausible jumps in the PLC program. The segmented HMI adds a plausibility check that flags a value that moved faster than physics allows. CISA CPG 3.A (log collection and detection); ISA/IEC 62443 integrity monitoring.
 
 ---
 
@@ -123,8 +124,8 @@ python3 /opt/scripts/s7_attack.py stop            # halt the RTU CPU
 **Physical consequence in the sim:** opening the feeder breaker islands the bus; with the load shed the generation/load imbalance ramps the frequency up past 53 Hz and the excursion alarm latches. `stop` freezes the RTU: operators keep their screen but lose control, and the sim holds the last outputs.
 **Fix:** set a station password / access-protection level on the controller (`S7_NO_PASSWORD=0` makes the RTU refuse unauthenticated stop and breaker-open and re-assert RUN), keep S7comm reachable only from the HMI and historian, and put the RTU in a protected zone. CISA CPG 2.A, 2.F; ISA/IEC 62443 SL-1 authentication on control commands.
 
-### 8. CIP tag write and unauthenticated logic push to the dosing controller
-**Where:** `plc-dosing` 172.30.40.21:44818 (EtherNet/IP) and :8080 (logic-update service)
+### 8. CIP tag write and unauthenticated logic push to the NaOH dosing controller
+**Where:** `plc-dosing` 172.30.40.21:44818 (EtherNet/IP) and :8080 (logic-update service). `plc-dosing` is the Allen-Bradley-style controller for the RO inter-pass NaOH (caustic) dosing, tags `DoseSetpoint`, `DoseRate`, `LogicRev`, `LogicForced`.
 **Real-world parallel:** Rockwell logic-download abuse; the CyberAv3ngers "IOControl" tooling manipulating OT devices in 2023-2024.
 **Vulnerability:** CIP tag writes are unauthenticated, and the controller is left in REMOTE with a program-download path that takes no credential.
 **MITRE ATT&CK for ICS:** T0843 Program Download, T0889 Modify Program, T0836 Modify Parameter
@@ -134,7 +135,7 @@ python3 /opt/scripts/cip_attack.py read
 python3 /opt/scripts/cip_attack.py set 15         # write DoseSetpoint (contained by the interlock)
 python3 /opt/scripts/cip_attack.py logic-push     # POST the unauthenticated download
 ```
-**Physical consequence in the sim:** the tag write drives the metering rate up, but the downstream overdose interlock still catches it near 4 ppm. The logic push sets `LogicForced`: the metering pump pins at 100%, the interlock is bypassed, and the residual runs to about 20 ppm with no ceiling. `LogicRev` increments.
+**Physical consequence in the sim:** the tag write drives the NaOH metering rate up; the caustic overdose pushes RO2 conductivity (2QAH401) past 2 uS/cm, but the release interlock catches it and holds Freigabe off. The logic push sets `LogicForced`: the metering pump pins at 100% and the pushed program also drives the loop return conductivity up sharply (contaminant term), so `DI_COND_HIGH_LOOP` latches, Freigabe is firmly blocked, and the DI loop is circulating off-spec water. `LogicRev` increments. Getting that water *released* still needs scenario 5 (raise the limit) or scenario 9 (remove the interlock).
 **Honest scope note:** a real Studio 5000 download cannot be emulated without Rockwell tooling. The container runs an unauthenticated logic-update service that swaps its tag logic; it teaches the concept and the detection, not the wire format.
 **Fix:** put the controller keyswitch in RUN (`ENIP_ALLOW_LOGIC_DOWNLOAD=0` disables the download service and drops the controller out of REMOTE), require authentication for program changes, alarm on any `LogicRev` change at the historian, and restrict :44818 to the HMI. CISA CPG 2.F, 1.E (change management); ISA/IEC 62443 SL-1/SL-2 on program download.
 
@@ -142,17 +143,17 @@ python3 /opt/scripts/cip_attack.py logic-push     # POST the unauthenticated dow
 
 ## Group D, impact and persistence
 
-### 9. Modified ladder logic holds the intake pump on
+### 9. Modified control program removes the release interlock
 **Where:** `plc-water` OpenPLC runtime UI, 172.30.40.20:8080 (published `127.0.0.1:8073`)
 **Real-world parallel:** the general class of control-logic modification; the operator-facing half of Stuxnet.
 **Vulnerability:** the runtime accepts a program upload while the keyswitch is in REMOTE, with only the factory `openplc` / `openplc` login. The uploaded program becomes the running control logic.
 **MITRE ATT&CK for ICS:** T0889 Modify Program, T0843 Program Download, T0831 Manipulation of Control, T0832 Manipulation of View
 **Confirm / exploit with:**
 ```bash
-python3 /opt/scripts/push_logic_water.py          # upload a control program with the 98% interlock removed
+python3 /opt/scripts/push_logic_water.py          # upload a program that forces Freigabe true and drops the RO2 hard-safety
 ```
-**Physical consequence in the sim:** with the high-level interlock gone the intake pump stays on past the high setpoint; the raw tank (LT-101) climbs to 100% and overflows. Combined with scenario 8 there is nothing left to stop a chlorine overdose reaching the distribution main.
-**Fix:** physical keyswitch in RUN so downloads are refused (`MODBUS_WRITE_OPEN=0` locks the keyswitch in this build), authentication and change control on the runtime, offline signed backups of the golden program, and file-integrity / `LogicRev` alarming. `./reset.sh` reloads the golden program and is the recovery drill. CISA CPG 1.E, 2.A, 7.A (system backups); ISA/IEC 62443 application integrity.
+**Physical consequence in the sim:** the running program is now `crosscreek_ro_v1_PATCHED`. "Freigabe an Mischerei" is forced true regardless of conductivity or UV, and the RO2 hard-safety no longer stops pass 2 on grossly off-spec permeate. Chain it with scenario 5 or 8 to degrade the water and it flows to the consumers with nothing left to stop it. On its own it is a latent failure: the safety is gone but nothing bad is happening yet.
+**Fix:** physical keyswitch in RUN so downloads are refused (`MODBUS_WRITE_OPEN=0` locks the keyswitch in this build), authentication and change control on the runtime, offline signed backups of the golden program, and file-integrity / program-name alarming. `./reset.sh` reloads the golden program and is the recovery drill. CISA CPG 1.E, 2.A, 7.A (system backups); ISA/IEC 62443 application integrity.
 
 ### 10. Wiper-style HMI config clobber
 **Where:** `hmi-water`
@@ -172,12 +173,12 @@ python3 /opt/scripts/push_logic_water.py          # upload a control program wit
 | 1 Internet-exposed HMI | T0883, T0812, T0822 | 2.A, 2.F, 2.W | zone boundary, SL-1 auth |
 | 2 Unauth remote access | T0822, T0886 | 2.H, 2.W | secure remote access |
 | 3 Eng-ws pivot | T0818, T0864 | 2.L, 2.Q | asset inventory, least privilege |
-| 4 Modbus write | T0855, T0836, T0831 | 2.F, 5.A | conduit filtering |
-| 5 Setpoint tamper | T0836 | 2.F | defensive coding |
+| 4 Stop the DI loop pump (Modbus) | T0855, T0831, T0813 | 2.F, 5.A | conduit filtering |
+| 5 Raise the release limit (Modbus) | T0836 | 2.F | defensive coding |
 | 6 HMI blinding | T0856, T0832, T0815 | 3.A | integrity monitoring |
 | 7 S7 stop-CPU / breaker | T0816, T0858, T0855, T0879 | 2.A, 2.F | SL-1 command auth |
 | 8 CIP write / logic push | T0843, T0889, T0836 | 2.F, 1.E | SL-1/2 program download |
-| 9 Ladder logic swap | T0889, T0843, T0831 | 1.E, 2.A, 7.A | application integrity |
+| 9 Remove the release interlock (program swap) | T0889, T0843, T0831 | 1.E, 2.A, 7.A | application integrity |
 | 10 HMI wiper | T0809, T0881, T0828 | 7.A, 5.A | backup and recovery |
 
 The defended controls line up with the CISA / EPA / AWWA "Top Cyber Actions

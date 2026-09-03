@@ -14,7 +14,7 @@
 
 ## Slide 3: D2 — Allowlist at the controller
 - Segmentation stops the outside attacker; not the pivoted one
-- `MODBUS_WRITE_OPEN=0`: PLC accepts writes only from HMI + sim, range-checks the dose setpoint every scan
+- `MODBUS_WRITE_OPEN=0`: PLC accepts writes only from HMI + sim, clamps the release conductivity limit (0.5–5.0) and the loop-pressure SP every scan
 - Dosing controller leaves REMOTE; RTU requires auth for stop/breaker-open
 - Defense in depth = 62443 conduit enforcement + defensive coding
 

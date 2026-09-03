@@ -36,8 +36,8 @@ docker exec crosscreek-router-fw nft list ruleset | grep CC-FW-DROP
 </pre>
 
 <h2>5.3 Module D2: Allowlist the Protocol at the Controller</h2>
-<p>Segmentation stops the attacker who is outside the OT zone. It does nothing about an attacker who has pivoted onto it, through the compromised engineering workstation for instance. So the controllers get a second layer. With <code>MODBUS_WRITE_OPEN=0</code>, the water PLC program enforces a source allowlist: it accepts writes only from the HMI and the process simulator, and it range-checks the dose setpoint on every scan, clamping anything above the safe maximum. The dosing controller drops out of REMOTE. The RTU requires authentication for stop and for breaker-open.</p>
-<p>This is defense in depth expressed as ISA/IEC 62443 conduit enforcement plus defensive coding in the control program. Re-run the Session 3 overdose against the segmented range and watch the setpoint get pulled straight back to the ceiling.</p>
+<p>Segmentation stops the attacker who is outside the OT zone. It does nothing about an attacker who has pivoted onto it, through the compromised engineering workstation for instance. So the controllers get a second layer. With <code>MODBUS_WRITE_OPEN=0</code>, the water PLC program enforces a source allowlist and range-checks the release-critical setpoints on every scan: the conductivity release limit is clamped to 0.50 to 5.00 uS/cm, the loop pressure setpoint to a safe band, and the interlock-bypass coil cannot be set remotely at all. The NaOH dosing controller drops out of REMOTE. The RTU requires authentication for stop and for breaker-open.</p>
+<p>This is defense in depth expressed as ISA/IEC 62443 conduit enforcement plus defensive coding in the control program. Re-run the Session 3 raise-limit attack against the segmented range and watch the register get pulled straight back to the ceiling on the next scan. Note what this does <em>not</em> fix: the interlock's own hard limit was already a program constant, and Session 6 covers what catches an attacker who changes the program itself.</p>
 
 <h2>5.4 Module D3: Harden the Controllers</h2>
 <table>

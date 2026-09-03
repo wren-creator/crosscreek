@@ -11,14 +11,15 @@ Log into the water HMI. What password worked for the `admin` account?
 Read the file the engineering workstation shares that lists the controller
 credentials. What is its filename (just the name, not the path)?
 
-## flag3 — the frozen residual
-Run the Modbus chlorine overdose. The golden PLC program stops the residual
-climbing at a ceiling. What is that ceiling, in ppm, to one decimal place?
-(Hint: it is a discrete-input alarm and a constant in the program.)
+## flag3 — the hard limit
+`modbus_attack.py raise-limit` lets you move the release conductivity limit,
+but the golden program also has a *hard* limit that stops RO pass 2 on grossly
+off-spec permeate, and that one is a constant, not a register. What is it, in
+uS/cm, to one decimal place? (Look in `plc/water-openplc/mapfile.py`.)
 
 ## flag4 — the patched program
-Run `push_logic_water.py`. Open the water PLC runtime console and read the name
-of the program that is now running. Give it exactly.
+Run `push_logic_water.py`. Open the water PLC runtime console (`:8073`) and read
+the name of the program that is now running. Give it exactly.
 
 ## flag5 — the revision counter
 Run the CIP logic push against the dosing controller. Run `cip_attack.py read`

@@ -5,6 +5,7 @@
   recon.py creds        try the factory-default HMI logins
   recon.py engws        pull what the engineering workstation is sharing
 """
+import http.cookiejar
 import socket
 import sys
 import urllib.request
@@ -37,10 +38,15 @@ def creds():
         url = f"http://{host}:{T.HTTP_PORT}/login"
         data = b"username=admin&password=admin"
         try:
+            # carry the session cookie through the post-login redirect
+            opener = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
             req = urllib.request.Request(url, data=data)
-            with urllib.request.urlopen(req, timeout=3) as r:
-                body = r.read(200).decode("utf-8", "replace")
-            hit = "Overview" in body or r.status in (200, 302)
+            with opener.open(req, timeout=3) as r:
+                body = r.read(4000).decode("utf-8", "replace")
+            # a rejected login re-renders the form; an accepted one lands on
+            # the operator screen and has no password field
+            hit = 'type="password"' not in body
             print(f"[{'+' if hit else '-'}] {name} admin/admin -> "
                   f"{'ACCEPTED' if hit else 'rejected'}")
         except Exception as exc:

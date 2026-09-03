@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""hmi-water: Cross Creek water plant HMI.
+"""hmi-water: Cross Creek RO demineralisation plant HMI.
 
-Thin operator front-end over plc-water's Modbus interface. Deliberate
-weaknesses, driven by env:
+Thin operator front-end over plc-water's Modbus interface, styled after a
+Siemens SIMATIC panel "Grundbild". Deliberate weaknesses, driven by env:
   DEFAULT_CREDS=1       admin / admin
   VERBOSE_HMI_ERRORS=1  exceptions render the full traceback and the tag map
 """
@@ -25,8 +25,18 @@ ADMIN_PASS = os.environ.get("HMI_ADMIN_PASS", "admin")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("HMI_SECRET", "crosscreek-water-hmi")
-
 _client = ModbusTcpClient(PLC_HOST, port=PLC_PORT, timeout=2)
+
+# setpoint name -> (holding register, scale). value * scale is written.
+SP = {
+    "loop_press": (W.HR_LOOP_PRESS_SP_BAR_X100, 100),
+    "tank_lo": (W.HR_TANK_LO_SP_PCT, 1),
+    "tank_hi": (W.HR_TANK_HI_SP_PCT, 1),
+    "antiscalant_rate": (W.HR_ANTISCALANT_RATE_LH_X10, 10),
+    "naoh_rate": (W.HR_NAOH_RATE_LH_X10, 10),
+    "cond_limit": (W.HR_COND_LIMIT_US_X100, 100),
+    "ro_recovery": (W.HR_RO_RECOVERY_SP_PCT, 1),
+}
 
 
 def plc():
@@ -44,12 +54,8 @@ def _creds_ok(u, p):
 @app.errorhandler(Exception)
 def on_error(exc):
     if VERBOSE:
-        body = (
-            "HMI fault\n\n"
-            + "".join(traceback.format_exception(exc))
-            + "\n\nplc-water tag map:\n"
-            + (W.__doc__ or "")
-        )
+        body = ("HMI fault\n\n" + "".join(traceback.format_exception(exc))
+                + "\n\nplc-water tag map:\n" + (W.__doc__ or ""))
         return app.response_class(body, status=500, mimetype="text/plain")
     return app.response_class("internal error", status=500, mimetype="text/plain")
 
@@ -70,12 +76,11 @@ def index():
 def login():
     err = ""
     if request.method == "POST":
-        u = request.form.get("username", "")
-        p = request.form.get("password", "")
+        u, p = request.form.get("username", ""), request.form.get("password", "")
         if _creds_ok(u, p):
             session["user"] = u
             return redirect(url_for("index"))
-        err = "invalid credentials"
+        err = "Anmeldung fehlgeschlagen / invalid credentials"
     return render_template("login.html", err=err, hint=DEFAULT_CREDS)
 
 
@@ -88,43 +93,58 @@ def logout():
 @app.get("/api/state")
 def api_state():
     c = plc()
-    co = c.read_coils(0, 8, slave=1)
-    di = c.read_discrete_inputs(0, 8, slave=1)
-    ir = c.read_input_registers(0, 8, slave=1)
-    hr = c.read_holding_registers(0, 20, slave=1)
-    if any(r.isError() for r in (co, di, ir, hr)):
+    co = c.read_coils(0, 24, slave=1)
+    di = c.read_discrete_inputs(0, 16, slave=1)
+    ir = c.read_input_registers(0, 16, slave=1)
+    if any(r.isError() for r in (co, di, ir)):
         return jsonify(error="plc unreachable"), 502
+    b, d = co.bits, di.bits
+    g = lambda a: ir.registers[a] / 100.0
     return jsonify(
-        cpu_run=bool(co.bits[W.CO_CPU_RUN]),
-        pumps=dict(
-            intake=bool(co.bits[W.CO_INTAKE_PUMP]),
-            distribution=bool(co.bits[W.CO_DIST_PUMP]),
-            dosing=bool(co.bits[W.CO_DOSE_ENABLE]),
+        cpu_run=bool(b[W.CO_CPU_RUN]),
+        equipment=dict(
+            P101=bool(b[W.CO_P101_ANTISCALANT]), P102=bool(b[W.CO_P102_FEED]),
+            P301=bool(b[W.CO_P301_RO1_HP]), P302=bool(b[W.CO_P302_RO2]),
+            P401=bool(b[W.CO_P401_LOOP]), UV=bool(b[W.CO_UV401]),
         ),
-        mode=dict(
-            intake="HAND" if co.bits[W.CO_INTAKE_HAND] else "AUTO",
-            distribution="HAND" if co.bits[W.CO_DIST_HAND] else "AUTO",
-            dosing="HAND" if co.bits[W.CO_DOSE_HAND] else "AUTO",
+        mode={k: ("HAND" if b[v] else "AUTO") for k, v in W.HAND_COIL.items()},
+        seq={k: bool(b[v]) for k, v in W.SEQ_COIL.items()},
+        release=dict(
+            abnahme=bool(b[W.CO_ABNAHME]), freigabe=bool(b[W.CO_FREIGABE]),
+            bypass=bool(b[W.CO_BYPASS_RELEASE_ILK]),
         ),
         alarms=dict(
-            level_low=bool(di.bits[W.DI_LEVEL_LOW]),
-            level_high=bool(di.bits[W.DI_LEVEL_HIGH]),
-            press_low=bool(di.bits[W.DI_PRESS_LOW]),
-            overdose=bool(di.bits[W.DI_OVERDOSE]),
-            comms_fault=bool(di.bits[W.DI_COMMS_FAULT]),
+            tank_low=bool(d[W.DI_TANK_LOW]), tank_high=bool(d[W.DI_TANK_HIGH]),
+            loop_press_low=bool(d[W.DI_LOOP_PRESS_LOW]),
+            cond_high_ro2=bool(d[W.DI_COND_HIGH_RO2]),
+            cond_high_loop=bool(d[W.DI_COND_HIGH_LOOP]),
+            uv_fault=bool(d[W.DI_UV_FAULT]),
+            feed_flow_low=bool(d[W.DI_FEED_FLOW_LOW]),
+            antiscalant_low=bool(d[W.DI_ANTISCALANT_LOW]),
+            naoh_low=bool(d[W.DI_NAOH_LOW]),
+            release_blocked=bool(d[W.DI_RELEASE_BLOCKED]),
+            comms_fault=bool(d[W.DI_COMMS_FAULT]),
         ),
         pv=dict(
-            raw_level_pct=round(ir.registers[W.IR_RAW_TANK_LEVEL_PCT_X100] / 100.0, 1),
-            treated_level_pct=round(ir.registers[W.IR_TREATED_TANK_LEVEL_PCT_X100] / 100.0, 1),
-            chlorine_ppm=round(ir.registers[W.IR_CHLORINE_PPM_X100] / 100.0, 2),
-            header_psi=round(ir.registers[W.IR_DIST_PRESS_PSI_X100] / 100.0, 1),
-            flow_gpm=round(ir.registers[W.IR_FLOW_GPM_X10] / 10.0, 0),
+            feed_flow_m3h=round(g(W.IR_FEED_FLOW_M3H_X100), 2),
+            feed_press_bar=round(g(W.IR_FEED_PRESS_BAR_X100), 2),
+            ro1_cond_us=round(g(W.IR_RO1_COND_US_X100), 1),
+            ro2_cond_us=round(g(W.IR_RO2_COND_US_X100), 2),
+            ro2_press_bar=round(g(W.IR_RO2_PRESS_BAR_X100), 1),
+            ro_recovery_pct=round(g(W.IR_RO_RECOVERY_PCT_X100), 0),
+            di_tank_pct=round(g(W.IR_DI_TANK_PCT_X100), 1),
+            loop_press_bar=round(g(W.IR_LOOP_PRESS_BAR_X100), 2),
+            loop_flow_m3h=round(g(W.IR_LOOP_FLOW_M3H_X100), 2),
+            loop_ret_cond_us=round(g(W.IR_LOOP_RET_COND_US_X100), 2),
+            antiscalant_tank_pct=round(g(W.IR_ANTISCALANT_TANK_PCT_X100), 0),
+            naoh_tank_pct=round(g(W.IR_NAOH_TANK_PCT_X100), 0),
+            uv_intensity_pct=round(g(W.IR_UV_INTENSITY_PCT_X100), 0),
         ),
         sp=dict(
-            dose_ppm=round(hr.registers[W.HR_DOSE_SETPOINT_PPM_X100] / 100.0, 2),
-            press_target=hr.registers[W.HR_DIST_PRESS_TARGET_PSI],
+            loop_press=round(g(W.IR_LOOP_PRESS_SP_BAR_X100), 2),
+            cond_limit=round(g(W.IR_COND_LIMIT_US_X100), 2),
         ),
-        safe_max_ppm=W.SAFE_MAX_PPM,
+        cond_limit_design=W.COND_LIMIT_DEFAULT_US,
     )
 
 
@@ -135,22 +155,17 @@ def api_cmd():
     c = plc()
     cmd = request.json or {}
     action = cmd.get("action")
-    pump_coil = {"intake": W.CO_INTAKE_PUMP, "distribution": W.CO_DIST_PUMP,
-                 "dosing": W.CO_DOSE_ENABLE}
-    hand_coil = {"intake": W.CO_INTAKE_HAND, "distribution": W.CO_DIST_HAND,
-                 "dosing": W.CO_DOSE_HAND}
     if action == "mode":
-        # AUTO / HAND per device. Taking a pump to HAND is what lets the
-        # start/stop buttons stick; in AUTO the control program owns the output.
-        c.write_coil(hand_coil[cmd["which"]], cmd["hand"] == "HAND", slave=1)
+        c.write_coil(W.HAND_COIL[cmd["which"]], cmd["hand"] == "HAND", slave=1)
     elif action == "pump":
-        c.write_coil(pump_coil[cmd["which"]], bool(cmd["on"]), slave=1)
-    elif action == "dose_setpoint":
-        c.write_register(
-            W.HR_DOSE_SETPOINT_PPM_X100, int(float(cmd["ppm"]) * 100), slave=1
-        )
-    elif action == "press_target":
-        c.write_register(W.HR_DIST_PRESS_TARGET_PSI, int(cmd["psi"]), slave=1)
+        c.write_coil(W.RUN_COIL[cmd["which"]], bool(cmd["on"]), slave=1)
+    elif action == "seq":
+        c.write_coil(W.SEQ_COIL[cmd["which"]], bool(cmd["on"]), slave=1)
+    elif action == "abnahme":
+        c.write_coil(W.CO_ABNAHME, bool(cmd["on"]), slave=1)
+    elif action == "sp":
+        reg, scale = SP[cmd["name"]]
+        c.write_register(reg, int(round(float(cmd["value"]) * scale)), slave=1)
     else:
         return jsonify(error="unknown action"), 400
     return jsonify(ok=True)

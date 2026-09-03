@@ -1,160 +1,399 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Cross Creek Water &mdash; Plant Overview</title>
+<title>Cross Creek RO Plant &mdash; Grundbild</title>
 <style>
-  body{background:#12202b;color:#d7e3ef;font-family:"Segoe UI",system-ui,sans-serif;margin:0}
-  header{background:#0d1a24;padding:.6em 1.2em;display:flex;justify-content:space-between;
-         align-items:center;border-bottom:2px solid #2e7d68}
-  header h1{font-size:1em;letter-spacing:.1em;text-transform:uppercase;color:#7fd4c1;margin:0}
-  header a{color:#9fb3c6;font-size:.8em;text-decoration:none}
-  #overdose{display:none;background:#b00020;color:#fff;text-align:center;padding:.5em;
-            font-weight:700;letter-spacing:.15em}
-  .wrap{display:flex;gap:1.4em;padding:1.4em;flex-wrap:wrap}
-  svg{background:#0d1a24;border:1px solid #24384a;border-radius:6px}
-  .card{background:#1b2c3a;border:1px solid #24384a;border-radius:6px;padding:1em 1.2em;min-width:230px}
-  .card h2{font-size:.78em;letter-spacing:.08em;text-transform:uppercase;color:#9fb3c6;margin:.1em 0 .8em}
-  .row{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;margin:.3em 0}
-  .row b{color:#e8f0f7}
-  button{background:#26485c;border:1px solid #3a5065;color:#d7e3ef;padding:.35em .7em;
-         border-radius:3px;cursor:pointer;font-size:.8em}
-  button:hover{background:#2e7d68}
-  input{width:70px;background:#12202b;border:1px solid #3a5065;color:#e8f0f7;padding:.25em;border-radius:3px}
-  .alarm{color:#ff8a80}.ok{color:#7fd4c1}
-  .mode{font-size:.78em;letter-spacing:.05em}
+  :root{
+    --bezel:#22434d; --bezel2:#2c525d; --screen:#c3d3da; --line:#2f6fb0;
+    --line2:#1b4b7a; --taghdr:#2b5c86; --tagval:#eef4f6; --tagtxt:#12324a;
+    --auto:#2f8f2f; --hand:#c98a2a; --seqon:#2f8f2f; --seqoff:#3a5a86;
+    --ok:#2f8f2f; --bad:#c02626;
+  }
+  *{box-sizing:border-box}
+  body{background:#0e1518;margin:0;min-height:100vh;display:flex;
+       align-items:flex-start;justify-content:center;
+       font-family:"Segoe UI",system-ui,sans-serif;padding:18px}
+  .panel{background:var(--bezel);border-radius:14px;padding:14px 60px 46px 18px;
+         position:relative;box-shadow:0 10px 40px #000a;max-width:1180px;width:100%}
+  .bez-top{display:flex;justify-content:space-between;align-items:baseline;
+           padding:2px 6px 10px}
+  .bez-top .siemens{color:#eef4f6;font-weight:800;font-size:1.25em;letter-spacing:.14em}
+  .bez-top .simatic{color:#7fa7b2;font-weight:600;letter-spacing:.18em}
+  .touch{position:absolute;right:14px;top:70px;color:#5b8592;font-weight:700;
+         letter-spacing:.35em;writing-mode:vertical-rl;font-size:1.4em}
+  .screen{background:var(--screen);border:2px solid #16323b;border-radius:4px;
+          overflow:hidden}
+  /* title bar */
+  .titlebar{display:flex;align-items:stretch;background:#e2e9ec;
+            border-bottom:2px solid #9fb0b7;font-size:.82em}
+  .titlebar>div{display:flex;align-items:center;padding:4px 8px;border-right:1px solid #b7c4ca}
+  .logo{background:#dfe7ea;font-weight:800;color:#1b5e8a;letter-spacing:.05em}
+  .tbtns,.sbtns{flex-direction:column;gap:2px}
+  .tbtns button,.sbtns button{font:inherit;font-size:.92em;padding:1px 10px;
+      background:#cdd8dd;border:1px solid #9fb0b7;border-radius:2px;cursor:pointer}
+  .title{flex:1;justify-content:center;font-weight:700;font-size:1.25em;color:#123}
+  .clock{flex-direction:column;gap:2px;font-variant-numeric:tabular-nums;color:#123}
+  /* alarm bar */
+  .alarmbar{min-height:22px;background:#eef4f6;border-bottom:2px solid #9fb0b7;
+            padding:2px 10px;font-size:.8em;color:var(--bad);font-weight:600;
+            display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  /* mimic area */
+  .mimic{position:relative;background:var(--screen);padding:6px}
+  svg{display:block;width:100%;height:auto}
+  .tag{position:absolute;font-size:10px;line-height:1.15;transform:translate(-50%,-50%)}
+  .tag .h{background:var(--taghdr);color:#fff;padding:1px 4px;font-family:"Courier New",monospace;
+          white-space:nowrap;border:1px solid #1b3a52}
+  .tag .v{background:var(--tagval);color:var(--tagtxt);padding:1px 4px;border:1px solid #1b3a52;
+          border-top:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tag .v.hi{background:#f4c9c9;color:#7a1414;font-weight:700}
+  /* AUTO blocks */
+  .autoblocks{position:absolute;left:10px;top:8px;display:grid;
+              grid-template-columns:1fr 1fr;gap:5px}
+  .autoblk{width:96px;padding:5px 4px;text-align:center;color:#fff;font-size:10px;
+           font-weight:700;border-radius:3px;cursor:pointer;background:var(--auto);
+           border:1px solid #1c3a1c;line-height:1.25}
+  .autoblk.hand{background:var(--hand);border-color:#5c3d12}
+  /* SEQ column */
+  .seqcol{position:absolute;right:8px;top:120px;display:flex;flex-direction:column;gap:3px;width:150px}
+  .seqbtn{padding:4px 6px;font-size:10px;font-weight:600;color:#dfe9ef;text-align:center;
+          background:var(--seqoff);border:1px solid #22384f;border-radius:2px;cursor:pointer}
+  .seqbtn.on{background:var(--seqon);border-color:#1c3a1c;color:#fff}
+  /* indicators */
+  .inds{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:8px;font-size:10px;color:#123}
+  .ind{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .dot{width:14px;height:14px;border-radius:50%;border:1px solid #123;background:#8aa;display:inline-block}
+  .dot.red{background:var(--bad)} .dot.green{background:var(--ok)}
+  /* nav tabs */
+  .navtabs{display:flex;background:#dfe7ea;border-top:2px solid #9fb0b7;font-size:.82em}
+  .navtabs button{flex:1;padding:6px 4px;font:inherit;background:#dfe7ea;border:0;
+                  border-right:1px solid #b7c4ca;cursor:pointer;color:#123;line-height:1.15}
+  .navtabs button.active{background:#c3d3da;font-weight:700}
+  /* F keys */
+  .fkeys{position:absolute;left:18px;right:60px;bottom:10px;display:flex;gap:10px}
+  .fkey{flex:1;height:24px;background:var(--bezel2);border-radius:3px}
+  .fkey span{color:#5b8592;font-size:9px;position:relative;top:-12px;left:2px}
+  /* popups */
+  .pop{position:fixed;inset:0;background:#0009;display:flex;align-items:center;
+       justify-content:center;z-index:20}
+  .pop .box{background:#dfe7ea;border:2px solid #16323b;border-radius:4px;min-width:280px;
+            max-width:420px;font-size:.85em;color:#123}
+  .pop h3{margin:0;background:var(--taghdr);color:#fff;padding:6px 10px;font-size:1em;
+          display:flex;justify-content:space-between}
+  .pop h3 button{background:#0000;border:0;color:#fff;font-size:1.1em;cursor:pointer}
+  .pop .body{padding:10px 12px}
+  .pop .row{display:flex;justify-content:space-between;align-items:center;margin:.4em 0;gap:8px}
+  .pop button.act{background:#cdd8dd;border:1px solid #9fb0b7;border-radius:2px;
+                  padding:3px 12px;cursor:pointer;font:inherit}
+  .pop input{width:90px;padding:2px 4px;border:1px solid #9fb0b7;font:inherit}
+  .list{max-height:240px;overflow:auto}
+  .list div{padding:3px 0;border-bottom:1px solid #b7c4ca;color:var(--bad)}
+  [hidden]{display:none!important}
+  #toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+         background:#123c4d;color:#cfe;padding:6px 14px;border-radius:4px;
+         font-size:.8em;z-index:30}
 </style>
-<header>
-  <h1>Cross Creek WTP &mdash; Plant Overview</h1>
-  <span>{{ user }} &nbsp;|&nbsp; <a href="/logout">sign out</a></span>
-</header>
-<div id="overdose">&#9888; CHLORINE OVERDOSE &mdash; DOSING INTERLOCK</div>
-<div class="wrap">
-  <svg id="pid" width="560" height="360" viewBox="0 0 560 360">
-    <!-- raw water tank -->
-    <rect x="30" y="70" width="90" height="180" fill="#12202b" stroke="#5b7a92"/>
-    <rect id="rawfill" x="31" y="130" width="88" height="119" fill="#2f6f9e"/>
-    <text x="75" y="60" text-anchor="middle" fill="#9fb3c6" font-size="11">RAW  LT-101</text>
-    <!-- intake pump -->
-    <circle id="p-intake" cx="75" cy="285" r="14" fill="#3a3f45" stroke="#5b7a92"/>
-    <text x="75" y="315" text-anchor="middle" fill="#9fb3c6" font-size="10">P-101</text>
-    <line x1="75" y1="250" x2="75" y2="271" stroke="#5b7a92" stroke-width="3"/>
-    <!-- pipe to treatment / dosing -->
-    <line x1="120" y1="160" x2="240" y2="160" stroke="#5b7a92" stroke-width="3"/>
-    <circle id="p-dose" cx="240" cy="120" r="12" fill="#3a3f45" stroke="#5b7a92"/>
-    <line x1="240" y1="132" x2="240" y2="160" stroke="#5b7a92" stroke-width="3"/>
-    <text x="240" y="104" text-anchor="middle" fill="#9fb3c6" font-size="10">MP-301</text>
-    <!-- treated tank -->
-    <rect x="240" y="70" width="90" height="180" fill="#12202b" stroke="#5b7a92"/>
-    <rect id="trtfill" x="241" y="110" width="88" height="139" fill="#2f9e7a"/>
-    <text x="285" y="60" text-anchor="middle" fill="#9fb3c6" font-size="11">TREATED LT-201</text>
-    <line x1="240" y1="200" x2="330" y2="200" stroke="#5b7a92" stroke-width="3" opacity="0"/>
-    <!-- distribution pump + header -->
-    <line x1="330" y1="200" x2="430" y2="200" stroke="#5b7a92" stroke-width="3"/>
-    <circle id="p-dist" cx="400" cy="200" r="14" fill="#3a3f45" stroke="#5b7a92"/>
-    <text x="400" y="230" text-anchor="middle" fill="#9fb3c6" font-size="10">P-401</text>
-    <line x1="430" y1="200" x2="500" y2="200" stroke="#5b7a92" stroke-width="3"/>
-    <circle cx="510" cy="200" r="20" fill="none" stroke="#5b7a92"/>
-    <text id="psi" x="510" y="204" text-anchor="middle" fill="#e8f0f7" font-size="12">--</text>
-    <text x="510" y="240" text-anchor="middle" fill="#9fb3c6" font-size="10">PT-401</text>
-  </svg>
 
-  <div class="card">
-    <h2>Process values</h2>
-    <div class="row">Raw tank <b id="v-raw">--</b></div>
-    <div class="row">Treated tank <b id="v-trt">--</b></div>
-    <div class="row">Chlorine <b id="v-cl">--</b></div>
-    <div class="row">Header <b id="v-psi">--</b></div>
-    <div class="row">Flow <b id="v-flow">--</b></div>
-    <div class="row">CPU <b id="v-cpu">--</b></div>
+<div class="panel">
+  <div class="bez-top"><span class="siemens">SIEMENS</span><span class="simatic">SIMATIC HMI</span></div>
+  <span class="touch">TOUCH</span>
+
+  <div class="screen">
+    <div class="titlebar">
+      <div class="logo">&#8776; CROSS&nbsp;CREEK</div>
+      <div class="tbtns"><button>Logon</button><button onclick="location='/logout'">Logoff</button></div>
+      <div class="title">Grundbild</div>
+      <div class="sbtns"><button>System</button><button onclick="location.reload()">Reset</button></div>
+      <div class="clock"><span id="date">--</span><span id="time">--</span></div>
+    </div>
+
+    <div class="alarmbar" id="alarmbar"></div>
+
+    <div class="mimic">
+      <svg viewBox="0 0 940 430" preserveAspectRatio="xMidYMid meet">
+        <!-- top return line -->
+        <path d="M300 40 H900 V70" fill="none" stroke="#2f6fb0" stroke-width="3"/>
+        <text x="820" y="34" font-size="11" fill="#12324a">VE Wasser R&#252;cklauf</text>
+        <!-- feed -->
+        <text x="18" y="392" font-size="11" fill="#12324a" transform="rotate(-90 18 392)">Zulauf</text>
+        <path d="M30 380 H150" stroke="#2f6fb0" stroke-width="4"/>
+        <circle id="p-P102" class="pump" cx="170" cy="380" r="15" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="170" y="410" font-size="10" fill="#12324a" text-anchor="middle">1P102</text>
+        <path d="M185 380 H240 V150" stroke="#2f6fb0" stroke-width="4" fill="none"/>
+        <!-- antiscalant dosing -->
+        <rect x="95" y="300" width="46" height="46" fill="#c9c86a" stroke="#1b4b7a"/>
+        <circle id="p-P101" class="pump" cx="118" cy="285" r="12" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="118" y="266" font-size="10" fill="#12324a" text-anchor="middle">1P101</text>
+        <path d="M118 297 V300 M141 322 H200" stroke="#8a8a4a" stroke-width="3" fill="none"/>
+        <text x="70" y="330" font-size="9" fill="#12324a" transform="rotate(-90 70 330)">Antiscalant</text>
+        <!-- RO racks -->
+        <text x="300" y="150" font-size="12" fill="#12324a" font-weight="bold">RO2</text>
+        <g stroke="#1b4b7a" stroke-width="2" fill="#eef4f6">
+          <rect x="255" y="158" width="170" height="16"/><rect x="255" y="178" width="170" height="16"/>
+          <rect x="255" y="198" width="170" height="16"/>
+        </g>
+        <text x="300" y="330" font-size="12" fill="#12324a" font-weight="bold">RO1</text>
+        <g stroke="#1b4b7a" stroke-width="2" fill="#eef4f6">
+          <rect x="255" y="252" width="170" height="16"/><rect x="255" y="272" width="170" height="16"/>
+          <rect x="255" y="292" width="170" height="16"/>
+        </g>
+        <path d="M240 300 H255 M425 300 H470 V186 H520" stroke="#2f6fb0" stroke-width="4" fill="none"/>
+        <circle id="p-P301" class="pump" cx="470" cy="300" r="14" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="470" y="330" font-size="10" fill="#12324a" text-anchor="middle">2P301</text>
+        <path d="M425 186 H470" stroke="#2f6fb0" stroke-width="4"/>
+        <circle id="p-P302" class="pump" cx="540" cy="186" r="14" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="540" y="216" font-size="10" fill="#12324a" text-anchor="middle">2P302</text>
+        <!-- NaOH dosing -->
+        <rect x="600" y="240" width="42" height="46" fill="#7d4a6a" stroke="#1b4b7a"/>
+        <circle cx="600" cy="220" r="11" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="655" y="240" font-size="10" fill="#12324a">NaOH</text>
+        <path d="M560 186 H621 V240" stroke="#7d4a6a" stroke-width="3" fill="none"/>
+        <!-- to DI tank -->
+        <path d="M554 186 H640 V120" stroke="#2f6fb0" stroke-width="4" fill="none"/>
+        <!-- DI water tank -->
+        <ellipse cx="695" cy="112" rx="55" ry="14" fill="#cfe0e6" stroke="#1b4b7a" stroke-width="2"/>
+        <rect x="640" y="112" width="110" height="130" fill="#eef4f6" stroke="#1b4b7a" stroke-width="2"/>
+        <rect id="tankfill" x="641" y="180" width="108" height="61" fill="#2f6fb0"/>
+        <ellipse cx="695" cy="242" rx="55" ry="14" fill="#2f6fb0" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="695" y="98" font-size="11" fill="#12324a" text-anchor="middle">VE Wassertank</text>
+        <!-- loop pump / UV / consumers -->
+        <path d="M695 242 V300 H770" stroke="#2f6fb0" stroke-width="4" fill="none"/>
+        <circle id="p-P401" class="pump" cx="770" cy="300" r="15" fill="#3a3f45" stroke="#1b4b7a" stroke-width="2"/>
+        <text x="770" y="330" font-size="10" fill="#12324a" text-anchor="middle">3P401</text>
+        <path d="M785 300 H840" stroke="#2f6fb0" stroke-width="4"/>
+        <g id="uv-box"><rect x="840" y="284" width="42" height="32" fill="#c9c86a" stroke="#1b4b7a" stroke-width="2"/>
+          <path d="M844 300 h34 M846 289 l30 22 M846 311 l30 -22" stroke="#7a7a2a" stroke-width="1.5"/></g>
+        <text x="861" y="278" font-size="10" fill="#12324a" text-anchor="middle">3UV401</text>
+        <path d="M882 300 H930" stroke="#2f6fb0" stroke-width="4"/>
+        <path d="M918 292 l14 8 -14 8 z" fill="#2f6fb0"/>
+        <text x="905" y="330" font-size="10" fill="#12324a" text-anchor="middle">Verbraucher</text>
+        <path d="M770 285 V70" stroke="#2f6fb0" stroke-width="3" fill="none" opacity="0.5"/>
+      </svg>
+
+      <!-- overlaid tag boxes: left% / top% of the mimic -->
+      <div class="tag" style="left:16%;top:92%"><div class="h">1FQIAHL101</div><div class="v" id="t-feedflow">-- m&#179;/h</div></div>
+      <div class="tag" style="left:24%;top:42%"><div class="h">1PT105</div><div class="v" id="t-feedpress">-- bar</div></div>
+      <div class="tag" style="left:40%;top:62%"><div class="h">1QAH301</div><div class="v" id="t-ro1cond">-- &#181;S/cm</div></div>
+      <div class="tag" style="left:33%;top:31%"><div class="h">2QAH401</div><div class="v" id="t-ro2cond">-- &#181;S/cm</div></div>
+      <div class="tag" style="left:60%;top:44%"><div class="h">2PT301</div><div class="v" id="t-ro2press">-- bar</div></div>
+      <div class="tag" style="left:20%;top:70%"><div class="h">Ausbeute RO</div><div class="v" id="t-recovery">-- %</div></div>
+      <div class="tag" style="left:74%;top:37%"><div class="h">3B401</div><div class="v" id="t-tank">-- %</div></div>
+      <div class="tag" style="left:87%;top:53%"><div class="h">3PITC401</div><div class="v" id="t-looppress">-- bar</div></div>
+      <div class="tag" style="left:6%;top:52%"><div class="h">Antisc. Tank</div><div class="v" id="t-antitank">-- %</div></div>
+      <div class="tag" style="left:70%;top:64%"><div class="h">NaOH Tank</div><div class="v" id="t-naohtank">-- %</div></div>
+      <div class="tag" style="left:93%;top:74%"><div class="h">3UV401</div><div class="v" id="t-uv">-- %</div></div>
+
+      <div class="autoblocks" id="autoblocks">
+        <div class="autoblk" data-k="RO_VALVES">RO Ventile<br><span>AUTO</span></div>
+        <div class="autoblk" data-k="LOOP_VALVES">LOOP Ventile<br><span>AUTO</span></div>
+        <div class="autoblk" data-k="RO_AGG">RO Agg.<br><span>AUTO</span></div>
+        <div class="autoblk" data-k="LOOP_AGG">LOOP Agg.<br><span>AUTO</span></div>
+      </div>
+
+      <div class="inds">
+        <div class="ind">Abnahme aktiv <span class="dot" id="i-abnahme" onclick="cmd({action:'abnahme',on:!ST.release.abnahme},'Abnahme')"></span></div>
+        <div class="ind">Freigabe<br>an Mischerei <span class="dot" id="i-freigabe"></span></div>
+      </div>
+
+      <div class="seqcol" id="seqcol">
+        <div class="seqbtn" data-seq="RO">SEQ RO</div>
+        <div class="seqbtn" data-seq="SANITISE">SEQ RO1 Sanitisieren</div>
+        <div class="seqbtn" data-seq="SANITISE">SEQ RO2 Sanitisieren</div>
+        <div class="seqbtn" data-seq="CIP">SEQ CIP RO1</div>
+        <div class="seqbtn" data-seq="CIP">SEQ CIP RO2</div>
+        <div class="seqbtn" data-seq="LOOP">SEQ Loop Zirkulation</div>
+        <div class="seqbtn" data-seq="SANITISE">SEQ Loop Sanitisieren</div>
+      </div>
+    </div>
+
+    <div class="navtabs" id="navtabs">
+      <button class="active" data-tab="uebersicht">&#220;bersicht</button>
+      <button data-tab="info">Vor-Behandlung</button>
+      <button data-tab="info">RO 1/2</button>
+      <button data-tab="info">CIP/SIP</button>
+      <button data-tab="info">VE-Loop</button>
+      <button data-tab="param">Parameter</button>
+      <button data-tab="regler">Regler</button>
+      <button data-tab="meld">Meldungen</button>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Alarms</h2>
-    <div class="row">Level low <b id="a-ll">--</b></div>
-    <div class="row">Level high <b id="a-lh">--</b></div>
-    <div class="row">Pressure low <b id="a-pl">--</b></div>
-    <div class="row">Overdose <b id="a-od">--</b></div>
-    <div class="row">Comms <b id="a-cf">--</b></div>
-  </div>
-
-  <div class="card">
-    <h2>Controls</h2>
-    <p style="font-size:.72em;color:#9fb3c6;margin:.2em 0 .8em">
-      A pump in <b>AUTO</b> is driven by the PLC program; start/stop will not
-      hold. Switch it to <b>HAND</b> to take manual control.</p>
-    <div class="row">Intake pump <b id="m-intake" class="mode">--</b></div>
-    <div class="row"><span>
-      <button onclick="mode('intake','AUTO')">AUTO</button>
-      <button onclick="mode('intake','HAND')">HAND</button></span><span>
-      <button onclick="pump('intake',1)">start</button>
-      <button onclick="pump('intake',0)">stop</button></span></div>
-    <div class="row">Dist. pump <b id="m-distribution" class="mode">--</b></div>
-    <div class="row"><span>
-      <button onclick="mode('distribution','AUTO')">AUTO</button>
-      <button onclick="mode('distribution','HAND')">HAND</button></span><span>
-      <button onclick="pump('distribution',1)">start</button>
-      <button onclick="pump('distribution',0)">stop</button></span></div>
-    <div class="row">Dosing <b id="m-dosing" class="mode">--</b></div>
-    <div class="row"><span>
-      <button onclick="mode('dosing','AUTO')">AUTO</button>
-      <button onclick="mode('dosing','HAND')">HAND</button></span><span>
-      <button onclick="pump('dosing',1)">start</button>
-      <button onclick="pump('dosing',0)">stop</button></span></div>
-    <div class="row">Dose setpoint
-      <span><input id="sp-cl" type="number" step="0.1" value="2.5">
-      <button onclick="doseSp()">set</button></span></div>
-    <div class="row">Header target
-      <span><input id="sp-psi" type="number" value="60">
-      <button onclick="pressSp()">set</button></span></div>
-    <div id="toast" style="margin-top:.6em;font-size:.78em;color:#7fd4c1;min-height:1.1em"></div>
+  <div class="fkeys">
+    <div class="fkey"><span>F1</span></div><div class="fkey"><span>F2</span></div>
+    <div class="fkey"><span>F3</span></div><div class="fkey"><span>F4</span></div>
+    <div class="fkey"><span>F5</span></div><div class="fkey"><span>F6</span></div>
+    <div class="fkey"><span>F7</span></div><div class="fkey"><span>F8</span></div>
   </div>
 </div>
+
+<!-- faceplate popup -->
+<div class="pop" id="fp" hidden><div class="box">
+  <h3><span id="fp-tag">Faceplate</span><button onclick="hide('fp')">&times;</button></h3>
+  <div class="body">
+    <div class="row">Status <b id="fp-status">--</b></div>
+    <div class="row">Betriebsart / Mode <b id="fp-mode">--</b></div>
+    <div class="row"><span>
+      <button class="act" onclick="fpMode('AUTO')">AUTO</button>
+      <button class="act" onclick="fpMode('HAND')">HAND</button></span><span>
+      <button class="act" onclick="fpRun(1)">START</button>
+      <button class="act" onclick="fpRun(0)">STOP</button></span></div>
+    <p style="font-size:.85em;color:#456">In AUTO the program owns this output; START/STOP hold only in HAND.</p>
+  </div>
+</div></div>
+
+<!-- parameter / regler dialog -->
+<div class="pop" id="dlg" hidden><div class="box">
+  <h3><span id="dlg-title">Parameter</span><button onclick="hide('dlg')">&times;</button></h3>
+  <div class="body" id="dlg-body"></div>
+</div></div>
+
+<!-- meldungen -->
+<div class="pop" id="meld" hidden><div class="box">
+  <h3>Meldungen<button onclick="hide('meld')">&times;</button></h3>
+  <div class="body"><div class="list" id="meld-list"></div></div>
+</div></div>
+
+<div id="toast" hidden></div>
+
 <script>
-const $ = id => document.getElementById(id);
-function bit(el, v, invert){ el.textContent = v ? "ALARM" : "normal";
-  el.className = (v ^ !!invert) ? "alarm" : "ok"; }
-async function tick(){
-  let r; try { r = await (await fetch('/api/state')).json(); } catch(e){ return; }
-  if(r.error) return;
-  $('v-raw').textContent = r.pv.raw_level_pct + ' %';
-  $('v-trt').textContent = r.pv.treated_level_pct + ' %';
-  $('v-cl').textContent  = r.pv.chlorine_ppm + ' ppm  (sp ' + r.sp.dose_ppm + ')';
-  $('v-psi').textContent = r.pv.header_psi + ' psi  (tgt ' + r.sp.press_target + ')';
-  $('v-flow').textContent = r.pv.flow_gpm + ' gpm';
-  $('v-cpu').textContent = r.cpu_run ? 'RUN' : 'STOP';
-  $('v-cpu').className = r.cpu_run ? 'ok' : 'alarm';
-  bit($('a-ll'), r.alarms.level_low); bit($('a-lh'), r.alarms.level_high);
-  bit($('a-pl'), r.alarms.press_low); bit($('a-od'), r.alarms.overdose);
-  bit($('a-cf'), r.alarms.comms_fault);
-  $('overdose').style.display = r.alarms.overdose ? 'block' : 'none';
-  $('rawfill').setAttribute('y', 250 - r.pv.raw_level_pct*1.8);
-  $('rawfill').setAttribute('height', Math.max(0, r.pv.raw_level_pct*1.8));
-  $('trtfill').setAttribute('y', 250 - r.pv.treated_level_pct*1.8);
-  $('trtfill').setAttribute('height', Math.max(0, r.pv.treated_level_pct*1.8));
-  $('psi').textContent = Math.round(r.pv.header_psi);
-  const col = on => on ? '#2e7d68' : '#3a3f45';
-  $('p-intake').setAttribute('fill', col(r.pumps.intake));
-  $('p-dist').setAttribute('fill', col(r.pumps.distribution));
-  $('p-dose').setAttribute('fill', col(r.pumps.dosing));
-  for(const k of ['intake','distribution','dosing']){
-    const el = $('m-'+k); if(!el || !r.mode) continue;
-    el.textContent = r.mode[k];
-    el.className = 'mode ' + (r.mode[k] === 'HAND' ? 'alarm' : 'ok');
-  }
-}
-function toast(msg){ $('toast').textContent = msg;
-  clearTimeout(toast.t); toast.t = setTimeout(()=>{$('toast').textContent='';}, 2500); }
-async function cmd(body, label){
-  try {
-    const res = await fetch('/api/cmd',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const j = await res.json();
-    toast(res.ok && j.ok ? ('→ ' + label) : ('✗ ' + (j.error || res.status)));
-  } catch(e){ toast('✗ ' + e); }
+const $ = s => document.querySelector(s);
+let ST = null, FP = null;
+const AGG = {RO_AGG:['P301','P302'], LOOP_AGG:['P401']};
+const ALARM_TEXT = {
+  tank_low:"3B401 DI-Tank Niveau tief", tank_high:"3B401 DI-Tank Niveau hoch",
+  loop_press_low:"3PITC401 Loop-Druck tief", cond_high_ro2:"2QAH401 Leitf&auml;higkeit hoch (Produkt off-spec)",
+  cond_high_loop:"Loop-R&uuml;cklauf Leitf&auml;higkeit hoch", uv_fault:"3UV401 Intensit&auml;t tief",
+  feed_flow_low:"1FQIAHL101 Zulauf tief", antiscalant_low:"Antiscalant Tank leer",
+  naoh_low:"NaOH Tank leer", release_blocked:"Freigabe an Mischerei GESPERRT",
+  comms_fault:"Prozess-Kommunikation gest&ouml;rt"};
+
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;
+  clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600);}
+function show(id){$('#'+id).hidden=false;} function hide(id){$('#'+id).hidden=true;}
+
+async function cmd(body,label){
+  try{const r=await fetch('/api/cmd',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)}); const j=await r.json();
+    toast((r.ok&&j.ok?'→ ':'✗ ')+(label||JSON.stringify(body)));}
+  catch(e){toast('✗ '+e);}
   tick();
 }
-const mode = (which,m) => cmd({action:'mode',which,hand:m}, which+' → '+m);
-const pump = (which,on) => cmd({action:'pump',which,on}, which+' '+(on?'start':'stop'));
-const doseSp = () => cmd({action:'dose_setpoint',ppm:$('sp-cl').value}, 'dose setpoint '+$('sp-cl').value+' ppm');
-const pressSp = () => cmd({action:'press_target',psi:$('sp-psi').value}, 'header target '+$('sp-psi').value+' psi');
-tick(); setInterval(tick, 1500);
+function pumpCmd(dev,on){cmd({action:'pump',which:dev,on},dev+(on?' START':' STOP'));}
+function modeCmd(dev,hand){cmd({action:'mode',which:dev,hand},dev+' → '+hand);}
+
+// clock
+function clock(){const d=new Date();
+  $('#date').textContent=d.toLocaleDateString('de-DE');
+  $('#time').textContent=d.toLocaleTimeString('de-DE');}
+setInterval(clock,1000);clock();
+
+// faceplate
+document.querySelectorAll('.pump').forEach(el=>{
+  el.style.cursor='pointer';
+  el.addEventListener('click',()=>{FP=el.id.slice(2);renderFP();show('fp');});
+});
+function renderFP(){
+  if(!ST||!FP)return;
+  $('#fp-tag').textContent=FP;
+  $('#fp-status').textContent=ST.equipment[FP]?'LÄUFT / running':'AUS / stopped';
+  $('#fp-mode').textContent=ST.mode[FP]||'AUTO';
+}
+const fpMode=m=>{modeCmd(FP,m);};
+const fpRun=o=>{pumpCmd(FP,o);};
+
+// AUTO blocks
+$('#autoblocks').addEventListener('click',e=>{
+  const b=e.target.closest('.autoblk'); if(!b||!ST)return;
+  const k=b.dataset.k;
+  if(k in AGG){
+    const devs=AGG[k]; const toHand=devs.every(d=>ST.mode[d]!=='HAND');
+    devs.forEach(d=>modeCmd(d,toHand?'HAND':'AUTO'));
+  }else{
+    modeCmd(k, ST.mode[k]==='HAND'?'AUTO':'HAND');
+  }
+});
+// SEQ column
+$('#seqcol').addEventListener('click',e=>{
+  const b=e.target.closest('.seqbtn'); if(!b||!ST)return;
+  const s=b.dataset.seq; cmd({action:'seq',which:s,on:!ST.seq[s]},'SEQ '+s);
+});
+// nav tabs
+$('#navtabs').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  const t=b.dataset.tab;
+  if(t==='param'||t==='regler') openDlg(t);
+  else if(t==='meld') openMeld();
+  else if(t==='info') toast('Bildschirm nicht in diesem Build');
+});
+
+const SETPOINTS=[
+  ['loop_press','3PITC401 Loop-Druck Sollwert','bar',0.1],
+  ['cond_limit','Freigabe Leitfähigkeit Grenzwert','µS/cm',0.05],
+  ['naoh_rate','NaOH Dosierrate','L/h',0.1],
+  ['antiscalant_rate','Antiscalant Dosierrate','L/h',0.1],
+  ['tank_lo','3B401 Niveau tief (RO Start)','%',1],
+  ['tank_hi','3B401 Niveau hoch (RO Stop)','%',1],
+];
+function openDlg(kind){
+  $('#dlg-title').textContent = kind==='regler'?'Regler 3PITC401':'Parameter';
+  const rows = kind==='regler'
+    ? [['loop_press','3PITC401 Loop-Druck Sollwert','bar',0.1]]
+    : SETPOINTS;
+  const pv = kind==='regler'
+    ? `<div class="row">Istwert / PV <b>${ST.pv.loop_press_bar.toFixed(2)} bar</b></div>` : '';
+  $('#dlg-body').innerHTML = pv + rows.map(([n,lbl,u,step])=>`
+    <div class="row"><span>${lbl}</span>
+      <span><input id="sp-${n}" type="number" step="${step}" value="${ST.sp[n]??''}">
+      <button class="act" onclick="setSp('${n}','${u}')">Set</button> ${u}</span></div>`).join('');
+  show('dlg');
+}
+function setSp(n,u){cmd({action:'sp',name:n,value:$('#sp-'+n).value}, n+' = '+$('#sp-'+n).value+' '+u);}
+function openMeld(){
+  const act = Object.entries(ST.alarms).filter(([k,v])=>v);
+  $('#meld-list').innerHTML = act.length
+    ? act.map(([k])=>`<div>${new Date().toLocaleTimeString('de-DE')} &nbsp; ${ALARM_TEXT[k]||k}</div>`).join('')
+    : '<div style="color:#2f8f2f">Keine aktiven Meldungen</div>';
+  show('meld');
+}
+
+async function tick(){
+  let r; try{r=await(await fetch('/api/state')).json();}catch(e){return;}
+  if(r.error)return; ST=r;
+  const p=r.pv;
+  const setv=(id,txt,hi)=>{const e=$(id);e.textContent=txt;e.classList.toggle('hi',!!hi);};
+  setv('#t-feedflow', p.feed_flow_m3h.toFixed(2)+' m³/h', r.alarms.feed_flow_low);
+  setv('#t-feedpress', p.feed_press_bar.toFixed(2)+' bar');
+  setv('#t-ro1cond', p.ro1_cond_us.toFixed(1)+' µS/cm', p.ro1_cond_us>30);
+  setv('#t-ro2cond', p.ro2_cond_us.toFixed(2)+' µS/cm', r.alarms.cond_high_ro2);
+  setv('#t-ro2press', p.ro2_press_bar.toFixed(1)+' bar');
+  setv('#t-recovery', p.ro_recovery_pct.toFixed(0)+' %');
+  setv('#t-tank', p.di_tank_pct.toFixed(1)+' %', r.alarms.tank_low||r.alarms.tank_high);
+  setv('#t-looppress', p.loop_press_bar.toFixed(2)+' bar  (SP '+r.sp.loop_press.toFixed(1)+')', r.alarms.loop_press_low);
+  setv('#t-antitank', p.antiscalant_tank_pct.toFixed(0)+' %', r.alarms.antiscalant_low);
+  setv('#t-naohtank', p.naoh_tank_pct.toFixed(0)+' %', r.alarms.naoh_low);
+  setv('#t-uv', p.uv_intensity_pct.toFixed(0)+' %', r.alarms.uv_fault);
+  // tank fill
+  const f=$('#tankfill'), h=Math.max(0,Math.min(128,p.di_tank_pct*1.28));
+  f.setAttribute('height',h); f.setAttribute('y',242-14-h);
+  // pump colours
+  const col=on=>on?'#2f8f2f':'#3a3f45';
+  for(const d of ['P101','P102','P301','P302','P401']) $('#p-'+d).setAttribute('fill',col(r.equipment[d]));
+  $('#uv-box').querySelector('rect').setAttribute('fill', r.equipment.UV?'#e6e46a':'#8a8a55');
+  // AUTO blocks
+  document.querySelectorAll('.autoblk').forEach(b=>{
+    const k=b.dataset.k; let hand;
+    if(k in AGG) hand = AGG[k].every(d=>r.mode[d]==='HAND');
+    else hand = r.mode[k]==='HAND';
+    b.classList.toggle('hand',hand); b.querySelector('span').textContent = hand?'HAND':'AUTO';
+  });
+  // SEQ
+  document.querySelectorAll('.seqbtn').forEach(b=>b.classList.toggle('on', r.seq[b.dataset.seq]));
+  // indicators
+  $('#i-abnahme').className='dot '+(r.release.abnahme?'red':'');
+  $('#i-freigabe').className='dot '+(r.release.freigabe?'green':'red');
+  // alarm bar
+  const act=Object.entries(r.alarms).filter(([k,v])=>v).map(([k])=>ALARM_TEXT[k]||k);
+  $('#alarmbar').innerHTML = act.length? '&#9888; '+act.slice(0,4).join(' &nbsp;|&nbsp; ')
+    + (act.length>4?` &nbsp;(+${act.length-4})`:'') : '';
+  if($('#fp').hidden===false) renderFP();
+}
+tick(); setInterval(tick,1500);
 </script>

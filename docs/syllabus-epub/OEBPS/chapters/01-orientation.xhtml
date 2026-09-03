@@ -39,7 +39,7 @@
 <p>Notice that in the default range, Levels 1 and 2 share one flat network, <code>ot-net</code>. That is not a mistake in the lab. That is how a large number of real small utilities are actually built, and undoing it is the core of Session 5.</p>
 
 <h2>1.4 Map the Plant by Hand</h2>
-<p>Open both HMIs and behave like an operator. On the water side, <code>http://127.0.0.1:8071</code>, log in <code>admin</code> / <code>admin</code> and watch the plant run: the raw tank cycling between its setpoints as the intake pump duty-cycles, the chlorine residual holding at 2.5 ppm, the header pressure sitting near 60 psi. On the power side, <code>http://127.0.0.1:8072</code>, the bus at 50 Hz with all three breakers closed.</p>
+<p>Open both HMIs and behave like an operator. On the water side, <code>http://127.0.0.1:8071</code>, log in <code>admin</code> / <code>admin</code> and watch the RO plant run: the DI tank (3B401) cycling between its setpoints as the RO sequence duty-cycles, the RO2 permeate conductivity (2QAH401) holding below 1 uS/cm, the loop pressure (3PITC401) sitting near 3.8 bar, and "Freigabe an Mischerei" green. On the power side, <code>http://127.0.0.1:8072</code>, the bus at 50 Hz with all three breakers closed.</p>
 <p>Now get on the attacker box and look at the network the way an intruder who just landed would.</p>
 <pre>docker exec -it crosscreek-attacker bash
 ip route                                   # note: no default route, only the lab

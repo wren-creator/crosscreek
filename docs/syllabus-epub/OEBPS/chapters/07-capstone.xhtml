@@ -17,15 +17,15 @@
 <tbody>
 <tr><td>1</td><td><code>recon.py engws</code> from the eng-ws: read <code>notes.txt</code>, get every controller address, the runtime login, the RTU's "no password" state; grab <code>water_plc.st</code></td><td>2</td></tr>
 <tr><td>2</td><td><code>recon.py sweep</code> and <code>recon.py creds</code>: confirm the OT layout, log into both HMIs with <code>admin</code> / <code>admin</code></td><td>1, 2</td></tr>
-<tr><td>3</td><td><code>modbus_attack.py stop-dist</code>: collapse the header pressure target, the town starts losing pressure</td><td>3</td></tr>
+<tr><td>3</td><td><code>modbus_attack.py raise-limit 5.0</code> then <code>starve-antiscalant</code>: defeat the quality gate and foul the membranes</td><td>3</td></tr>
 <tr><td>4</td><td>Blind the water HMI: hold the input-register mirror at nominal while step 3 runs</td><td>3</td></tr>
-<tr><td>5</td><td><code>push_logic_water.py</code>: replace the water PLC program, delete the high-level interlock</td><td>4</td></tr>
-<tr><td>6</td><td><code>cip_attack.py logic-push</code>: force the metering pump to 100%, bypass the overdose interlock</td><td>4</td></tr>
+<tr><td>5</td><td><code>push_logic_water.py</code>: replace the water PLC program, force Freigabe true, drop the RO2 hard-safety</td><td>4</td></tr>
+<tr><td>6</td><td><code>cip_attack.py logic-push</code>: pin the NaOH pump at 100%, drive the loop conductivity up</td><td>4</td></tr>
 <tr><td>7</td><td><code>s7_attack.py trip feeder</code> then <code>trip load</code>: island the substation, drive the frequency excursion</td><td>4</td></tr>
 <tr><td>8</td><td><code>s7_attack.py stop</code>: halt the RTU so the operator cannot re-close the breakers</td><td>4</td></tr>
 </tbody>
 </table>
-<p>At the end of the chain: the raw tank is overflowing, contaminated water is heading for the main, the operator's screen shows a healthy plant, and the substation feeding the plant is dark and unresponsive. Reset the range with <code>./reset.sh</code> when you have seen it.</p>
+<p>At the end of the chain: the RO plant is releasing demineralised water that is well off-spec, the operator's screen shows it green, and the substation feeding the plant is dark and unresponsive. Reset the range with <code>./reset.sh</code> when you have seen it.</p>
 
 <h2>7.2 The Write-Up</h2>
 <p>Produce a report a plant manager and a regulator could both read. Four parts.</p>
@@ -57,7 +57,7 @@
 <p>Every step. That is the deliverable: proof that a defined, unexotic set of controls breaks a real attack chain at every link.</p>
 
 <h2>7.4 Incident-Response Tabletop</h2>
-<p>Run this as a discussion, 45 minutes, no keyboards. The scenario: at 02:00 the on-call operator gets a low-pressure alarm from the distribution system, and the water HMI looks normal. Walk it through:</p>
+<p>Run this as a discussion, 45 minutes, no keyboards. The scenario: at 02:00 the Mischerei phones in, their own incoming conductivity check is reading three times normal and they have stopped a production batch, but the plant's water HMI shows Freigabe green and every value at spec. Walk it through:</p>
 <ul>
 <li><strong>Detect.</strong> What tells you this is an incident and not a sensor fault? Who compares the HMI to the historian? What does the IDS show?</li>
 <li><strong>Contain.</strong> Can you isolate OT from IT without stopping the plant? Who has the authority to do that at 02:00, and is that written down?</li>

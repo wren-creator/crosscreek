@@ -8,46 +8,56 @@
 </head>
 <body>
 <h1>Session 3: Speaking the Machines' Language</h1>
-<p>Goal for this session: talk directly to the water PLC over Modbus/TCP, with no HMI in the loop, and make the plant do things it should not. This is scenarios 4, 5, and 6. The tool is a twenty-line Python client. There is no exploit here, because Modbus does not require one.</p>
+<p>Goal for this session: talk directly to the water PLC over Modbus/TCP, with no HMI in the loop, and make the RO plant do things it should not. This is scenarios 4, 5, and 6. The tool is a twenty-line Python client. There is no exploit here, because Modbus does not require one.</p>
 
-<h2>3.1 What Modbus Is, and What It Is Not</h2>
-<p>Modbus is from 1979. It is a request-response protocol over what is now TCP port 502. A client asks to read or write coils (single bits, think relay outputs) or registers (16-bit words, think setpoints and sensor values). There is no authentication. There is no session. There is no signing. There is no sequence number an attacker cannot guess. If you can open port 502, you are, as far as the PLC is concerned, the HMI.</p>
-<p>FrostyGoop, the malware that took the heat out of 600 buildings in Lviv in January 2024, was notable for being written in Go and for taking its target list from a config file. The Modbus part was not notable. It was function code 6, write single register, the same call your HMI makes every second.</p>
+<h2>3.1 The Plant You Are Attacking</h2>
+<p>The water side of Cross Creek is a two-pass reverse-osmosis demineralisation plant that produces ultrapure water for a downstream user, the "Mischerei." Feed water is dosed with antiscalant and pushed through RO pass 1; the permeate is dosed with a little caustic (NaOH) to knock down dissolved CO2, then polished through RO pass 2; the product goes to a DI storage tank and circulates continuously around a distribution loop with a UV steriliser on it. A control-program interlock, labelled "Freigabe an Mischerei" on the panel, only releases water to the consumer when the RO2 conductivity and the loop-return conductivity are below a limit, the UV intensity is above threshold, and the tank is not empty.</p>
+<p>That interlock is the safety you are going to attack.</p>
 
-<h2>3.2 Enumerate</h2>
+<h2>3.2 What Modbus Is, and What It Is Not</h2>
+<p>Modbus is from 1979. It is a request-response protocol over what is now TCP port 502. A client asks to read or write coils (single bits, think pump run commands) or registers (16-bit words, think setpoints and sensor values). There is no authentication. There is no session. There is no signing. If you can open port 502, you are, as far as the PLC is concerned, the HMI.</p>
+<p>FrostyGoop, the malware that took the heat out of 600 buildings in Lviv in January 2024, was notable for being written in Go and for taking its target list from a config file. The Modbus part was not notable. It was function code 6, write single register, the same call the HMI makes every second.</p>
+
+<h2>3.3 Enumerate</h2>
 <pre>python3 /opt/scripts/modbus_attack.py enum
 </pre>
-<p>That reads the coils, the discrete inputs, the holding registers, and the input registers and prints them. Spend a minute matching them to what you see on the HMI. Coil 0 is the intake pump. Coil 1 is the distribution pump. Holding register 0 is the chlorine dose setpoint, scaled by 100, so 250 means 2.50 ppm. Holding register 1 is the header pressure target. Input registers 0 through 4 are the live process values the HMI displays. The map is in <code>plc/water-openplc/mapfile.py</code> if you want the full list, but deriving it from the HMI is the exercise.</p>
+<p>That reads the coils, the discrete inputs, the holding registers, and the input registers and prints them. Match them to the panel. Coil 4 is the DI loop circulation pump 3P401. Coil 6 is the CPU keyswitch. Holding register 0 is the loop pressure setpoint (3PITC401). Holding register 5 is the conductivity limit that gates the release interlock. The full map is in <code>plc/water-openplc/mapfile.py</code>, but deriving the interesting registers from the panel is the exercise.</p>
 
-<h2>3.3 Stop the Distribution Pump (Scenario 4)</h2>
-<p>You could write coil 1 to zero, but the control program runs every 200 milliseconds and would turn it back on, because the header pressure is below target. That is a useful lesson in itself: a PLC with running logic fights you. So instead, change the thing the logic reads.</p>
-<pre>python3 /opt/scripts/modbus_attack.py stop-dist
-# writes holding register 1 (pressure target) = 5 psi
+<h2>3.4 Stop the Distribution Loop (Scenario 4)</h2>
+<p>The DI loop has to circulate continuously; if it stops, the water in the loop goes stagnant and the point of use loses supply. The control program keeps the loop pump running whenever the loop sequence is active, so a bare coil write to stop it gets reasserted on the next 200 ms scan. The way around that is the same trick a real intruder uses: take the pump to HAND first, so the program stops driving it, then stop it.</p>
+<pre>python3 /opt/scripts/modbus_attack.py stop-loop
+# writes coil 13 (P401 HAND) = 1, then coil 4 (P401 run) = 0
 </pre>
-<p>Now the control loop believes the target is 5 psi, sees the actual header at 60, and holds the pump off. Watch PT-401 on the water HMI. It bleeds down at about 1 psi per second under municipal demand, and inside a minute the <code>press_low</code> alarm latches and the town is losing pressure. You did that with one register write, and it will hold until someone notices and puts the target back.</p>
+<p>Watch 3PITC401 on the water HMI. Loop pressure bleeds from 3.8 bar toward zero in a couple of seconds, and <code>DI_LOOP_PRESS_LOW</code> latches. The Mischerei has lost its water, and it will hold until an operator notices the pump is in HAND and puts it back.</p>
 
-<h2>3.4 Overdose the Chlorine (Scenario 5)</h2>
-<pre>python3 /opt/scripts/modbus_attack.py overdose 15
-# writes holding register 0 = 1500  (15.00 ppm)
+<h2>3.5 Defeat the Quality Gate (Scenario 5)</h2>
+<p>The dangerous attack on a water plant is not stopping a pump. It is releasing water that is not safe. The release interlock compares the measured conductivity against holding register 5. Raise that register and the gate stops meaning anything.</p>
+<pre>python3 /opt/scripts/modbus_attack.py raise-limit 5.0
+# writes HR5 = 500  (5.00 uS/cm; the design limit is 2.00)
 </pre>
-<p>The residual chases the setpoint upward. Watch AIT-301 climb. Then watch it stop around 4 ppm and fall back, and the <code>overdose</code> alarm flag. That is the golden control program doing its job: it has an interlock that cuts the metering pump when the residual hits the safe maximum. On its own, the pure setpoint attack is contained by the PLC logic. To actually push contaminated water into the main you have to defeat that interlock, and that is Session 4. Note that for yourself: the setpoint write is the Oldsmar attack, and Oldsmar was caught. The dangerous version needs a second step.</p>
+<p>On its own that changes nothing you can see. So degrade the water underneath it. The antiscalant keeps scale off the RO membranes; cut it and they foul.</p>
+<pre>python3 /opt/scripts/modbus_attack.py starve-antiscalant
+# P101 to HAND and stopped, dose rate -> 0
+</pre>
+<p>Watch 1QAH301. Over about thirty seconds the RO1 permeate conductivity climbs from 12 toward 50 uS/cm as the membranes scale, and then 2QAH401, the product conductivity, follows it up past 2 uS/cm. Normally that trips <code>DI_COND_HIGH_RO2</code> and the interlock drops "Freigabe an Mischerei" to red, off-spec water is held. But you raised the limit to 5.0, so the alarm never fires and Freigabe stays green. The plant is now releasing demineralised water that is three times too conductive, and the panel says everything is fine.</p>
+<p>Note the shape of that: the pure setpoint write, by itself, was harmless. The pure membrane foul, by itself, would have been caught. It took both, and it still left the release interlock's own hard limit (a program constant, not a register) as a last line. Reaching past that is Session 4.</p>
 
-<h2>3.5 Blind the Operator (Scenario 6)</h2>
-<p>Everything above is visible on the HMI. The alarms fire. An attentive operator acts. So the mature version of this attack hides itself. The HMI reads input registers 0 through 4. The process simulator writes the real values into holding registers 10 through 14 every second, and the PLC scan loop copies them across. If you write the mirror registers faster than the sim updates them, you control what the operator sees.</p>
-<pre># sketch: hold the operator's view at nominal while pressure actually collapses
+<h2>3.6 Blind the Operator (Scenario 6)</h2>
+<p>Everything above is visible on the HMI. 2QAH401 goes red, Freigabe would normally go red, an attentive operator acts. So the mature version hides itself. The HMI reads input registers 0 through 14. The process simulator writes the real values into holding registers 10 through 22 and the PLC scan loop copies them across. If you write the mirror registers faster than the sim updates them, you control what the operator sees.</p>
+<pre># sketch: hold RO2 conductivity and the loop values at spec on the HMI
 python3 - &lt;&lt;'PY'
 from pymodbus.client import ModbusTcpClient
 import time
 c = ModbusTcpClient("172.30.40.20", port=502); c.connect()
-c.write_register(1, 5, slave=1)                 # collapse the pressure target
 while True:
-    c.write_registers(0, [6000,7000,250,6000,4500], slave=1)  # nominal-looking IR mirror
-    time.sleep(0.2)
+    # IR 3 = RO2 conductivity, IR 6 = DI tank, IR 7 = loop pressure, IR 9 = loop return cond
+    c.write_registers(3, [55], slave=1)          # 0.55 uS/cm, looks perfect
+    time.sleep(0.15)
 PY
 </pre>
-<p>Now the header is dropping and the HMI still shows 60 psi. This is Stuxnet's operator-facing trick in miniature: record normal, replay normal, run the process to failure behind it.</p>
+<p>Now run the antiscalant starve from 3.5 without raising the limit. The interlock in the PLC still knows the water is bad and holds Freigabe, but the operator's screen shows 0.55 uS/cm and green, so nobody escalates, and an attacker who is also spoofing the Freigabe coil completes the picture. This is Stuxnet's operator-facing trick in miniature: record normal, replay normal, run the process off-spec behind it.</p>
 
-<h2>3.6 What You Should Notice</h2>
-<p>Modbus gave you the plant with no credential and no exploit, and the only thing that saved the water quality was an interlock coded into the PLC program by an engineer who thought about failure. The pressure loop had no such interlock, and it fell over immediately. When you get to Session 5 you will not be able to fix Modbus, because Modbus cannot be fixed. You will fix everything around it: who can reach port 502, what the program accepts, and whether anyone would see a value that moved faster than water can.</p>
+<h2>3.7 What You Should Notice</h2>
+<p>Modbus gave you the plant with no credential and no exploit, and the only thing that saved the water quality was an interlock coded into the PLC program by an engineer who thought about failure, and even that had a register you could turn off. When you get to Session 5 you will not be able to fix Modbus, because Modbus cannot be fixed. You will fix everything around it: who can reach port 502, which setpoints the program will accept, whether the release limit can be written at all, and whether anyone would see a conductivity that climbed faster than a membrane can foul.</p>
 </body>
 </html>

@@ -1,25 +1,32 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Cross Creek Water &mdash; Operator Login</title>
+<title>Cross Creek RO Plant &mdash; Logon</title>
 <style>
-  body{background:#1b2733;color:#d7e3ef;font-family:"Segoe UI",system-ui,sans-serif;
+  body{background:#0e1518;color:#dfe9ef;font-family:"Segoe UI",system-ui,sans-serif;
        display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-  .panel{background:#243444;border:1px solid #3a5065;border-radius:6px;padding:2em 2.4em;width:320px}
-  h1{font-size:1.1em;letter-spacing:.08em;text-transform:uppercase;color:#7fd4c1;margin:.2em 0 1.2em}
-  label{display:block;font-size:.8em;margin:.9em 0 .25em;color:#9fb3c6}
-  input{width:100%;padding:.5em;background:#1b2733;border:1px solid #3a5065;color:#e8f0f7;border-radius:3px}
-  button{margin-top:1.4em;width:100%;padding:.6em;background:#2e7d68;border:0;color:#fff;
-         font-weight:600;letter-spacing:.05em;border-radius:3px;cursor:pointer}
-  .err{color:#ff8a80;font-size:.85em;margin-top:1em}
-  .hint{color:#6d8299;font-size:.75em;margin-top:1.4em;border-top:1px dashed #3a5065;padding-top:.8em}
+  .panel{background:#22434d;border-radius:14px;padding:16px 20px 20px}
+  .bez{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 10px}
+  .bez .s{color:#eef4f6;font-weight:800;letter-spacing:.14em}
+  .bez .h{color:#7fa7b2;font-weight:600;letter-spacing:.16em;font-size:.85em}
+  .screen{background:#c3d3da;border:2px solid #16323b;padding:2em 2.4em;width:320px;color:#12324a}
+  h1{font-size:1em;letter-spacing:.06em;text-transform:uppercase;color:#1b5e8a;margin:.2em 0 1.2em}
+  label{display:block;font-size:.8em;margin:.9em 0 .25em}
+  input{width:100%;padding:.5em;background:#eef4f6;border:1px solid #9fb0b7;color:#12324a}
+  button{margin-top:1.4em;width:100%;padding:.6em;background:#2b5c86;border:0;color:#fff;
+         font-weight:600;letter-spacing:.05em;cursor:pointer}
+  .err{color:#c02626;font-size:.85em;margin-top:1em}
+  .hint{color:#5b7a86;font-size:.75em;margin-top:1.4em;border-top:1px dashed #9fb0b7;padding-top:.8em}
 </style>
-<form class="panel" method="post">
-  <h1>Cross Creek WTP</h1>
-  <label>Operator ID</label>
-  <input name="username" autofocus autocomplete="off">
-  <label>Password</label>
-  <input name="password" type="password">
-  <button>Sign in</button>
-  {% if err %}<div class="err">{{ err }}</div>{% endif %}
-  {% if hint %}<div class="hint">Factory default account is still active.</div>{% endif %}
-</form>
+<div class="panel">
+  <div class="bez"><span class="s">SIEMENS</span><span class="h">SIMATIC HMI</span></div>
+  <form class="screen" method="post">
+    <h1>Cross Creek RO &mdash; Logon</h1>
+    <label>Bediener / Operator ID</label>
+    <input name="username" autofocus autocomplete="off">
+    <label>Passwort</label>
+    <input name="password" type="password">
+    <button>Anmelden</button>
+    {% if err %}<div class="err">{{ err }}</div>{% endif %}
+    {% if hint %}<div class="hint">Werkskonto ist noch aktiv (factory default account).</div>{% endif %}
+  </form>
+</div>

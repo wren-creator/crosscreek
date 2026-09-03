@@ -3,6 +3,39 @@
 All notable changes to Cross Creek are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- The water plant is now a two-pass reverse-osmosis demineralisation train
+  with a recirculating DI distribution loop, modelled on a real Siemens
+  SIMATIC-panelled Reinstwasser plant: feed + antiscalant dosing, RO1, NaOH
+  inter-pass dosing, RO2, a DI storage tank (3B401), a loop circulation pump
+  (3P401), a UV steriliser (3UV401), and a conductivity-based release interlock
+  ("Freigabe an Mischerei"). Far more to play with, ~15 live process values,
+  six pumps, four AUTO/HAND blocks, four sequences (RO / Loop / CIP /
+  Sanitise), and an editable Parameter/Regler screen.
+- `hmi/water` is redesigned as a Siemens SIMATIC panel "Grundbild": the teal
+  bezel with SIEMENS / SIMATIC HMI / TOUCH and F1-F8, a title bar with
+  Logon/Grundbild/System/Reset and a live clock, an alarm banner, the process
+  mimic with overlaid tag boxes (1PT105, 1QAH301, 2QAH401, 3B401, 3PITC401,
+  ...), the four AUTO blocks, the SEQ column, the Abnahme / Freigabe
+  indicators, and the nav tabs. Pump click opens a faceplate; Parameter and
+  Regler open a setpoint editor; Meldungen lists active alarms.
+- Water scenarios keep their shape with new mechanisms: 4 stops the DI loop
+  circulation pump (loop pressure collapse); 5 raises the release conductivity
+  limit so a fouled-membrane degradation passes the quality gate; 6 blinds the
+  conductivity readings; 9 swaps the program to force Freigabe true. Scenario 8
+  (`plc-dosing`) is now the NaOH inter-pass dosing controller. `plc-dosing`
+  itself is unchanged; `process-sim` maps its `DoseRate` to the NaOH L/h.
+- `modbus_attack.py` subcommands are now `stop-loop`, `raise-limit`,
+  `starve-antiscalant`, `restore`. `push_logic_water.py` uploads
+  `crosscreek_ro_v1_PATCHED`.
+- `docs/scenarios.md` (+ trainee), `docs/verification.md`, `docs/architecture.md`,
+  the README, the *Cross Creek 101* Session 3 chapter, and the instructor
+  slides / answer key / CTF are updated to the RO plant.
+- `recon.py creds` now detects a successful login by the absence of the
+  password field rather than a page marker.
+
 ## [0.1.0] - 2026-09-02
 
 First working release. The range runs both halves end to end.

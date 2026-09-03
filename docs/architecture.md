@@ -83,7 +83,7 @@ defaults to the vulnerable value if `.env` is absent.
 | `EXPOSE_HMI_TO_EDGE` | 2 | (documentary) HMI reachable from the edge via the flat firewall | edge -> OT dropped |
 | `DEFAULT_CREDS` | 2 | HMI `admin/admin`, PLC pass `1100` | operator-set credentials |
 | `EXPOSE_REMOTE_ACCESS` | 2 | unauthenticated VNC-style port on `eng-ws` | remote access via the DMZ jump host only |
-| `MODBUS_WRITE_OPEN` | 3-5 | no validation; OpenPLC keyswitch in REMOTE | setpoint clamp + keyswitch locked in RUN |
+| `MODBUS_WRITE_OPEN` | 3-5 | no validation; OpenPLC keyswitch in REMOTE | release-limit and setpoint clamps + keyswitch locked in RUN |
 | `S7_NO_PASSWORD` | 7 | stop-CPU / breaker-open unauthenticated | RTU forces RUN, ignores unauthenticated opens |
 | `ENIP_ALLOW_LOGIC_DOWNLOAD` | 8 | controller in REMOTE, logic-update service on | keyswitch RUN, service returns 403 |
 | `FLAT_NETWORK` | 5 | firewall forwards everything | zones + conduits enforced |
@@ -93,24 +93,40 @@ defaults to the vulnerable value if `.env` is absent.
 
 ## Mechanics worth explaining in detail
 
+### The water plant: a two-pass RO demineralisation train
+
+`plc-water` runs an OpenPLC-style program for a reverse-osmosis ultrapure
+water plant: feed and antiscalant dosing, RO pass 1, NaOH inter-pass dosing,
+RO pass 2, a DI storage tank (3B401), a recirculating distribution loop with a
+circulation pump (3P401) and a UV steriliser (3UV401), and a release interlock
+("Freigabe an Mischerei") that only permits release when RO2 and loop-return
+conductivity are below `HR_COND_LIMIT_US`, UV intensity is above threshold, and
+the tank is not empty. `process-sim/model_water.py` models the coupling: cut
+the antiscalant and the membranes foul (RO1 conductivity climbs, RO2 follows);
+cut the NaOH inter-pass dose and CO2 breaks through (RO2 conductivity climbs);
+stop the loop pump and the pressure bleeds out. The full Modbus map is in
+`plc/water-openplc/mapfile.py`.
+
 ### The dosing logic-download stand-in (scenario 8)
 
 A true Studio 5000 download is not reproducible without Rockwell tooling.
-`plc-dosing` instead runs an embedded cpppo EtherNet/IP simulator for the tag
-surface (real CIP reads/writes work) plus a Flask service on :8080. A POST to
-`/logic` while `ENIP_ALLOW_LOGIC_DOWNLOAD=1` sets the `LogicForced` tag; the
-scan loop then pins `DoseRate` at 100% and `process-sim` treats the downstream
-overdose interlock as bypassed. It teaches the concept and gives the IDS
-something real to alert on; it is not the S7-of-CIP wire format.
+`plc-dosing` (the NaOH inter-pass dosing controller) instead runs an embedded
+cpppo EtherNet/IP simulator for the tag surface (real CIP reads/writes work)
+plus a Flask service on :8080. A POST to `/logic` while
+`ENIP_ALLOW_LOGIC_DOWNLOAD=1` sets the `LogicForced` tag; the scan loop then
+pins `DoseRate` at 100% and `process-sim` adds a contaminant term to the loop
+return conductivity. It teaches the concept and gives the IDS something real to
+alert on; it is not the CIP wire format for a program download.
 
 ### HMI blinding (scenario 6)
 
 `process-sim` writes live sensor values into `plc-water` holding registers
-10-15 every tick; the PLC scan loop mirrors them to input registers 0-6 for
+10-22 every tick; the PLC scan loop mirrors them to input registers 0-14 for
 the HMI. An attacker on `ot-net` can hold either block at a nominal value
-faster than the sim updates it, so the HMI shows a healthy plant. The
-segmented HMI adds a plausibility check: a value that moved faster than the
-model allows is flagged rather than shown.
+faster than the sim updates it, so the HMI shows RO2 conductivity at spec and
+Freigabe green while the loop circulates off-spec water. The segmented HMI adds
+a plausibility check: a value that moved faster than the model allows is
+flagged rather than shown.
 
 ### Why the attacker can reach OT in flat mode but not segmented
 
