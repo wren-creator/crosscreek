@@ -3,19 +3,6 @@
 All notable changes to Cross Creek are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
-
-### Fixed
-- Water HMI pump buttons now hold. The PLC re-runs its control program every
-  200 ms, so an operator "start pump" in AUTO was reverted on the next scan
-  and looked broken. Added per-device AUTO/HAND (coils 5-7): in HAND the
-  program leaves that output to the operator; the safety interlocks still
-  apply in both modes. The Controls card gains AUTO/HAND toggles, a mode
-  badge, and a "→ sent" toast on every command.
-- Power HMI: breaker commands were always working, but a stopped RTU silently
-  ignores them. `/api/cmd` now returns a warning when the CPU is in STOP, the
-  HMI toasts it, and the banner reads "RTU CPU IN STOP — CONTROL LOST".
-
 ## [0.1.0] - 2026-09-02
 
 First working release. The range runs both halves end to end.
@@ -52,6 +39,9 @@ First working release. The range runs both halves end to end.
 - **`hmi-water`** and **`hmi-power`**: Flask + inline-SVG operator screens (a
   P&ID and a single-line diagram) that poll the PLCs and post commands.
   `DEFAULT_CREDS` gates `admin/admin`; `VERBOSE_HMI_ERRORS` leaks the tag map.
+  The water HMI has per-device AUTO/HAND so manual pump commands hold against
+  the running program (the safety interlocks apply in both modes); both HMIs
+  toast every command and the power HMI warns when the RTU CPU is in STOP.
 
 ### Boundary, supporting hosts, IDS
 
