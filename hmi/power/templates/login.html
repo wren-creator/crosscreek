@@ -2,19 +2,33 @@
 <meta charset="utf-8">
 <title>Cross Creek Substation &mdash; Operator Login</title>
 <style>
-  body{background:#1b2231;color:#dfe4ef;font-family:"Segoe UI",system-ui,sans-serif;
+  :root{ --bg:#141b28; --panel:#1c2536; --border:#2c3a52; --text:#dfe6f0; --dim:#8f9db3;
+         --brand:#2f8fae; --bad:#e0473f; }
+  body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;
        display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-  .panel{background:#252d40;border:1px solid #3d4763;border-radius:6px;padding:2em 2.4em;width:320px}
-  h1{font-size:1.1em;letter-spacing:.08em;text-transform:uppercase;color:#e0b96b;margin:.2em 0 1.2em}
-  label{display:block;font-size:.8em;margin:.9em 0 .25em;color:#a9b2c6}
-  input{width:100%;padding:.5em;background:#1b2231;border:1px solid #3d4763;color:#eef1f7;border-radius:3px}
-  button{margin-top:1.4em;width:100%;padding:.6em;background:#8a6d2f;border:0;color:#fff;
-         font-weight:600;letter-spacing:.05em;border-radius:3px;cursor:pointer}
-  .err{color:#ff8a80;font-size:.85em;margin-top:1em}
-  .hint{color:#7a839c;font-size:.75em;margin-top:1.4em;border-top:1px dashed #3d4763;padding-top:.8em}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:2em 2.4em;width:320px}
+  .brand{display:flex;align-items:center;gap:.6em;margin-bottom:1.2em}
+  .brand span{font-size:.82em;font-weight:700;letter-spacing:.05em;color:var(--text)}
+  .brand small{display:block;font-size:.85em;font-weight:600;letter-spacing:.1em;color:var(--dim);
+               text-transform:uppercase}
+  label{display:block;font-size:.8em;margin:.9em 0 .25em;color:var(--dim)}
+  input{width:100%;padding:.5em;background:var(--bg);border:1px solid var(--border);color:var(--text);
+        border-radius:3px}
+  input:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+  button{margin-top:1.4em;width:100%;padding:.6em;background:var(--brand);border:0;color:#0d1620;
+         font-weight:700;letter-spacing:.05em;border-radius:3px;cursor:pointer}
+  button:hover{filter:brightness(1.1)}
+  .err{color:var(--bad);font-size:.85em;margin-top:1em}
+  .hint{color:var(--dim);font-size:.75em;margin-top:1.4em;border-top:1px dashed var(--border);padding-top:.8em}
 </style>
 <form class="panel" method="post">
-  <h1>Cross Creek Substation</h1>
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 34 34" aria-hidden="true">
+      <circle cx="17" cy="17" r="16" fill="#173a4a" stroke="var(--brand)" stroke-width="2"/>
+      <path d="M18.5 5 L10 19 H16 L14 29 L25 14 H18 Z" fill="var(--brand)"/>
+    </svg>
+    <span>Cross Creek Municipal Power<small>Substation Control Center</small></span>
+  </div>
   <label>Operator ID</label>
   <input name="username" autofocus autocomplete="off">
   <label>Password</label>

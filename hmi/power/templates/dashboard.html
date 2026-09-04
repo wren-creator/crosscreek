@@ -1,121 +1,579 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Cross Creek Substation &mdash; Single Line</title>
+<title>Cross Creek Substation &mdash; Control Center</title>
 <style>
-  body{background:#141a26;color:#dfe4ef;font-family:"Segoe UI",system-ui,sans-serif;margin:0}
-  header{background:#0f131d;padding:.6em 1.2em;display:flex;justify-content:space-between;
-         align-items:center;border-bottom:2px solid #8a6d2f}
-  header h1{font-size:1em;letter-spacing:.1em;text-transform:uppercase;color:#e0b96b;margin:0}
-  header a{color:#a9b2c6;font-size:.8em;text-decoration:none}
-  #alarm{display:none;background:#b00020;color:#fff;text-align:center;padding:.5em;
-         font-weight:700;letter-spacing:.12em}
-  .wrap{display:flex;gap:1.4em;padding:1.4em;flex-wrap:wrap}
-  svg{background:#0f131d;border:1px solid #2a3346;border-radius:6px}
-  .card{background:#1d2534;border:1px solid #2a3346;border-radius:6px;padding:1em 1.2em;min-width:230px}
-  .card h2{font-size:.78em;letter-spacing:.08em;text-transform:uppercase;color:#a9b2c6;margin:.1em 0 .8em}
-  .row{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;margin:.3em 0}
-  .row b{color:#eef1f7}
-  button{background:#2b3550;border:1px solid #3d4763;color:#dfe4ef;padding:.35em .7em;
-         border-radius:3px;cursor:pointer;font-size:.8em}
-  button:hover{background:#8a6d2f}
-  .alarm{color:#ff8a80}.ok{color:#7fd4c1}
+  :root{
+    --bg:#141b28; --panel:#1c2536; --panel-head:#212c40; --border:#2c3a52;
+    --text:#dfe6f0; --dim:#8f9db3; --brand:#2f8fae; --brand-dim:#1f5f74;
+    --ok:#2fae72; --bad:#e0473f; --warn:#e0a339; --neutral:#59677f;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;
+       margin:0;font-size:14px}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+
+  /* header */
+  header{background:#eef1f5;color:#16233a;padding:.7em 1.2em;display:flex;
+         justify-content:space-between;align-items:center;border-bottom:3px solid var(--brand)}
+  .brand{display:flex;align-items:center;gap:.7em}
+  .brand h1{font-size:1.05em;letter-spacing:.03em;margin:0;font-weight:700}
+  .brand h1 small{display:block;font-size:.68em;font-weight:600;letter-spacing:.14em;
+                   color:#4a5878;text-transform:uppercase;margin-top:.15em}
+  .clock{text-align:right;font-variant-numeric:tabular-nums;line-height:1.3}
+  .clock .t{font-size:1.15em;font-weight:700}
+  .clock .d{font-size:.78em;color:#4a5878}
+
+  /* layout */
+  .wrap{display:flex;gap:1em;padding:1em;align-items:flex-start;flex-wrap:wrap}
+  .col{display:flex;flex-direction:column;gap:1em}
+  .col-left{width:270px;flex:0 0 auto}
+  .col-right{width:280px;flex:0 0 auto}
+  .col-center{flex:1 1 380px;min-width:340px;display:flex;justify-content:center}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .panel h2{margin:0;padding:.55em .9em;font-size:.72em;letter-spacing:.1em;text-transform:uppercase;
+            color:var(--dim);background:var(--panel-head);border-bottom:1px solid var(--border)}
+  .panel .body{padding:.8em .9em}
+
+  .kv{display:flex;justify-content:space-between;align-items:center;font-variant-numeric:tabular-nums;
+      margin:.4em 0}
+  .kv .l{color:var(--dim)}
+  .kv .v{font-weight:700}
+  .pill{display:inline-block;padding:.1em .55em;border-radius:3px;font-size:.78em;font-weight:700}
+  .pill.ok{background:#173a2c;color:var(--ok)}
+  .pill.bad{background:#3a1c1c;color:var(--bad)}
+
+  /* alarm & event log */
+  table.log{width:100%;border-collapse:collapse;font-size:.74em}
+  table.log th{text-align:left;color:var(--dim);font-weight:600;padding:.3em .2em;
+               border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
+  table.log td{padding:.32em .2em;border-bottom:1px solid #24304480;vertical-align:top}
+  table.log tr.active td{color:var(--bad)}
+  .log-scroll{max-height:230px;overflow-y:auto}
+  .dim{color:var(--dim)}
+
+  /* nav */
+  .navbtns{display:flex;flex-direction:column;gap:.4em}
+  .navbtns button{background:var(--panel-head);border:1px solid var(--border);color:var(--text);
+                  padding:.55em .7em;border-radius:4px;cursor:pointer;text-align:left;font-size:.82em}
+  .navbtns button.active{background:var(--brand-dim);border-color:var(--brand);font-weight:600}
+  .navbtns button:hover:not(.active){background:#26314a}
+
+  /* single line diagram */
+  svg#sld{width:100%;max-width:400px;height:auto;display:block}
+  .lbl{fill:var(--dim);font-size:11px}
+  .lbl-strong{fill:var(--text);font-size:11px;font-weight:700}
+  .device-status{font-size:9px;font-weight:700}
+  .brk-box{cursor:default}
+  .readout{fill:var(--text);font-size:11px;font-variant-numeric:tabular-nums}
+  .bigfreq{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+
+  /* trends */
+  .trend-cap{display:flex;justify-content:space-between;font-size:.72em;color:var(--dim);margin-bottom:.3em}
+  .trend-cap b{color:var(--text)}
+  svg.chart{width:100%;height:52px;display:block;margin-bottom:.9em}
+
+  /* breaker controls */
+  .brk-ctl{border:1px solid var(--border);border-radius:4px;margin-bottom:.6em}
+  .brk-ctl:last-child{margin-bottom:0}
+  .brk-ctl-head{display:flex;justify-content:space-between;align-items:center;background:var(--panel-head);
+                padding:.35em .6em;font-size:.78em;font-weight:700;letter-spacing:.03em}
+  .brk-ctl-btns{display:flex;gap:1px;background:var(--border)}
+  .brk-ctl-btns button{flex:1;background:var(--panel);border:0;color:var(--text);padding:.45em 0;
+                       font-size:.72em;font-weight:700;letter-spacing:.03em;cursor:pointer}
+  .brk-ctl-btns button:hover:not(:disabled){background:#26314a}
+  .brk-ctl-btns button:disabled{color:#4a5878;cursor:not-allowed}
+  .brk-ctl-btns button.lockout{color:var(--warn)}
+  .brk-ctl-btns button.lockout.active{background:#3a2c14;color:var(--warn)}
+  #toast{margin-top:.6em;font-size:.75em;color:var(--ok);min-height:1.1em}
+
+  /* footer */
+  footer{display:flex;justify-content:space-between;align-items:center;padding:.6em 1.2em;
+         background:var(--panel-head);border-top:1px solid var(--border);font-size:.82em}
+  footer .status{display:flex;align-items:center;gap:.5em}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--neutral)}
+  .dot.on{background:var(--ok);box-shadow:0 0 5px var(--ok)}
+  .dot.off{background:var(--bad);box-shadow:0 0 5px var(--bad)}
+  footer a{color:var(--dim);text-decoration:none;margin-left:.9em}
+  footer a:hover{color:var(--text)}
+  .role{background:var(--brand-dim);color:#cfe9f2;padding:.15em .6em;border-radius:3px;
+        font-size:.78em;font-weight:700;letter-spacing:.04em;margin-left:.6em}
+
+  @media (max-width:980px){
+    .wrap{flex-direction:column;align-items:stretch}
+    .col-left,.col-right,.col-center{width:auto}
+  }
+
+  /* modal dialogs (Settings / Diagnostics / Reports) */
+  .pop{position:fixed;inset:0;background:#0009;display:flex;align-items:center;
+       justify-content:center;z-index:20}
+  .pop .box{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+            min-width:320px;max-width:520px;max-height:80vh;overflow-y:auto}
+  .pop h3{margin:0;padding:.6em .9em;font-size:.85em;letter-spacing:.04em;
+          display:flex;justify-content:space-between;align-items:center;
+          background:var(--panel-head);border-bottom:1px solid var(--border)}
+  .pop h3 button{background:none;border:0;color:var(--dim);font-size:1.2em;cursor:pointer;
+                 line-height:1;padding:0 .2em}
+  .pop h3 button:hover{color:var(--text)}
+  .pop .body{padding:.9em}
+  .pop input{background:var(--bg);border:1px solid var(--border);color:var(--text);
+             padding:.35em .5em;border-radius:3px;width:6em;font-variant-numeric:tabular-nums}
+  .pop button.act{background:var(--brand-dim);border:1px solid var(--brand);color:#cfe9f2;
+                  padding:.35em .8em;border-radius:3px;cursor:pointer;font-weight:600}
+  .pop button.act:hover{filter:brightness(1.15)}
+  .note{color:var(--dim);font-size:.78em;margin-top:.8em;border-top:1px dashed var(--border);
+        padding-top:.7em}
 </style>
+
 <header>
-  <h1>Cross Creek Substation &mdash; Single Line</h1>
-  <span>{{ user }} &nbsp;|&nbsp; <a href="/logout">sign out</a></span>
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+      <circle cx="17" cy="17" r="16" fill="#173a4a" stroke="var(--brand)" stroke-width="2"/>
+      <path d="M18.5 5 L10 19 H16 L14 29 L25 14 H18 Z" fill="var(--brand)"/>
+    </svg>
+    <h1>Cross Creek Municipal Power
+      <small>Substation Control Center</small>
+    </h1>
+  </div>
+  <div class="clock">
+    <div class="t" id="clk-t">--:--:--</div>
+    <div class="d" id="clk-d">----</div>
+  </div>
 </header>
-<div id="alarm">&#9888; FREQUENCY EXCURSION</div>
+
 <div class="wrap">
-  <svg id="sld" width="420" height="360" viewBox="0 0 420 360">
-    <text x="210" y="30" text-anchor="middle" fill="#a9b2c6" font-size="11">138 kV GRID SOURCE</text>
-    <line x1="210" y1="36" x2="210" y2="70" stroke="#6b7794" stroke-width="3"/>
-    <!-- feeder breaker -->
-    <rect id="b-feeder" x="196" y="70" width="28" height="28" fill="#3a3f45" stroke="#6b7794"/>
-    <text x="250" y="88" fill="#a9b2c6" font-size="10">52-F  feeder</text>
-    <line x1="210" y1="98" x2="210" y2="140" stroke="#6b7794" stroke-width="3"/>
-    <!-- bus -->
-    <line x1="90" y1="140" x2="330" y2="140" stroke="#8fa0c0" stroke-width="5"/>
-    <text x="90" y="132" fill="#a9b2c6" font-size="10">BUS A</text>
-    <!-- bus tie -->
-    <rect id="b-tie" x="300" y="150" width="24" height="24" fill="#3a3f45" stroke="#6b7794"/>
-    <text x="300" y="192" fill="#a9b2c6" font-size="10">52-T</text>
-    <!-- load breaker -->
-    <line x1="150" y1="140" x2="150" y2="180" stroke="#6b7794" stroke-width="3"/>
-    <rect id="b-load" x="136" y="180" width="28" height="28" fill="#3a3f45" stroke="#6b7794"/>
-    <text x="176" y="198" fill="#a9b2c6" font-size="10">52-L  load</text>
-    <line x1="150" y1="208" x2="150" y2="250" stroke="#6b7794" stroke-width="3"/>
-    <circle cx="150" cy="270" r="18" fill="none" stroke="#6b7794"/>
-    <text x="150" y="274" text-anchor="middle" fill="#eef1f7" font-size="10" id="loadmw">--</text>
-    <text x="150" y="308" text-anchor="middle" fill="#a9b2c6" font-size="10">FEEDER 1</text>
-    <!-- freq readout -->
-    <text x="210" y="340" text-anchor="middle" fill="#e0b96b" font-size="16" id="freq">-- Hz</text>
-  </svg>
+  <div class="col col-left">
+    <div class="panel">
+      <h2>Station Status</h2>
+      <div class="body">
+        <div class="kv"><span class="l">System health</span><span class="v"><span class="pill" id="st-health">--</span></span></div>
+        <div class="kv"><span class="l">Total demand</span><span class="v" id="st-demand">-- MW</span></div>
+        <div class="kv"><span class="l">Active alarms</span><span class="v"><span class="pill" id="st-alarms">0</span></span></div>
+      </div>
+    </div>
 
-  <div class="card">
-    <h2>Bus values</h2>
-    <div class="row">Frequency <b id="v-freq">--</b></div>
-    <div class="row">Voltage <b id="v-volt">--</b></div>
-    <div class="row">Load <b id="v-load">--</b></div>
-    <div class="row">RTU CPU <b id="v-cpu">--</b></div>
+    <div class="panel">
+      <h2>Alarm &amp; Event Log</h2>
+      <div class="body" style="padding:.5em .6em">
+        <div class="log-scroll">
+          <table class="log">
+            <thead><tr><th>Time</th><th>Pri</th><th>Description</th><th>Status</th></tr></thead>
+            <tbody id="log-body"><tr><td colspan="4" class="dim">no events this session</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="navbtns">
+      <button class="active" data-nav="overview">System Overview</button>
+      <button data-nav="reports">Reports</button>
+      <button data-nav="settings">Settings</button>
+      <button data-nav="diag">Diagnostics</button>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Breakers</h2>
-    <div class="row">52-F feeder <b id="s-feeder">--</b></div>
-    <div class="row">52-T bus tie <b id="s-tie">--</b></div>
-    <div class="row">52-L load <b id="s-load">--</b></div>
+  <div class="col col-center">
+    <div class="panel" style="width:100%;max-width:420px">
+      <h2>Single Line &mdash; Bus A</h2>
+      <div class="body">
+        <svg id="sld" viewBox="0 0 380 500">
+          <text x="190" y="16" text-anchor="middle" class="lbl">138 kV GRID SOURCE</text>
+          <line x1="190" y1="24" x2="190" y2="58" stroke="var(--neutral)" stroke-width="3" id="ln-src"/>
+
+          <!-- static manual disconnect (not remotely operable) -->
+          <line x1="190" y1="58" x2="190" y2="66" stroke="var(--neutral)" stroke-width="3"/>
+          <line x1="190" y1="66" x2="202" y2="80" stroke="var(--dim)" stroke-width="2.5"/>
+          <line x1="190" y1="82" x2="190" y2="90" stroke="var(--neutral)" stroke-width="3"/>
+          <text x="206" y="78" class="lbl">GD-1</text>
+
+          <line x1="190" y1="90" x2="190" y2="112" stroke="var(--neutral)" stroke-width="3" id="ln-src2"/>
+
+          <!-- 52-F feeder breaker -->
+          <rect id="b-feeder" class="brk-box" x="170" y="112" width="40" height="32" rx="2" fill="#3a3f45" stroke="var(--neutral)" stroke-width="2"/>
+          <text x="214" y="122" class="lbl-strong">52-F</text>
+          <text x="214" y="134" class="lbl">feeder bkr</text>
+          <text id="s-feeder" x="0" y="0" class="device-status"></text>
+
+          <line x1="190" y1="144" x2="190" y2="168" stroke="var(--neutral)" stroke-width="3" id="ln-f-bus"/>
+
+          <!-- Bus A -->
+          <line x1="60" y1="168" x2="320" y2="168" stroke="var(--dim)" stroke-width="5" id="ln-bus"/>
+          <text x="60" y="160" class="lbl-strong">BUS A</text>
+          <text id="t-buskv" x="320" y="160" text-anchor="end" class="readout">-- kV</text>
+
+          <!-- tie branch -->
+          <line x1="130" y1="168" x2="130" y2="198" stroke="var(--neutral)" stroke-width="3" id="ln-bus-tie"/>
+          <rect id="b-tie" class="brk-box" x="112" y="198" width="36" height="30" rx="2" fill="#3a3f45" stroke="var(--neutral)" stroke-width="2"/>
+          <text x="152" y="208" class="lbl-strong">52-T</text>
+          <text x="152" y="220" class="lbl">bus tie</text>
+          <text id="s-tie" x="0" y="0" class="device-status"></text>
+          <line x1="130" y1="228" x2="130" y2="248" stroke="var(--neutral)" stroke-width="3" id="ln-tie-end"/>
+          <line x1="118" y1="248" x2="142" y2="248" stroke="var(--dim)" stroke-width="3"/>
+          <text x="130" y="264" text-anchor="middle" class="lbl">to Bus B</text>
+          <text x="130" y="276" text-anchor="middle" class="lbl">normally open</text>
+
+          <!-- load branch -->
+          <line x1="260" y1="168" x2="260" y2="198" stroke="var(--neutral)" stroke-width="3" id="ln-bus-load"/>
+          <rect id="b-load" class="brk-box" x="242" y="198" width="36" height="30" rx="2" fill="#3a3f45" stroke="var(--neutral)" stroke-width="2"/>
+          <text x="282" y="208" class="lbl-strong">52-L</text>
+          <text x="282" y="220" class="lbl">load bkr</text>
+          <text id="s-load" x="0" y="0" class="device-status"></text>
+          <line x1="260" y1="228" x2="260" y2="252" stroke="var(--neutral)" stroke-width="3" id="ln-load1"/>
+
+          <!-- static manual disconnect -->
+          <line x1="260" y1="252" x2="272" y2="264" stroke="var(--dim)" stroke-width="2.5"/>
+          <text x="284" y="262" class="lbl">FD-2</text>
+
+          <!-- transformer -->
+          <circle cx="260" cy="288" r="15" fill="none" stroke="var(--neutral)" stroke-width="2"/>
+          <circle cx="260" cy="304" r="15" fill="none" stroke="var(--neutral)" stroke-width="2"/>
+          <text x="284" y="292" class="lbl-strong">T1</text>
+          <text x="284" y="304" class="lbl">10 MVA</text>
+          <line x1="260" y1="319" x2="260" y2="344" stroke="var(--neutral)" stroke-width="3" id="ln-load2"/>
+
+          <path d="M248 344 L260 362 L272 344 Z" fill="var(--neutral)" id="ln-arrow"/>
+          <text x="260" y="380" text-anchor="middle" class="lbl-strong">FEEDER 1</text>
+
+          <text id="t-loadmw" x="260" y="398" text-anchor="middle" class="readout">-- MW</text>
+          <text id="t-loadamp" x="260" y="412" text-anchor="middle" class="readout">-- A</text>
+
+          <rect x="120" y="436" width="140" height="46" rx="4" fill="var(--panel-head)" stroke="var(--border)"/>
+          <text x="190" y="454" text-anchor="middle" class="lbl">system frequency</text>
+          <text id="t-freq" x="190" y="474" text-anchor="middle" class="bigfreq" fill="var(--ok)">-- Hz</text>
+        </svg>
+      </div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Control</h2>
-    <div class="row">52-F <span><button onclick="brk('feeder',1)">close</button>
-      <button onclick="brk('feeder',0)">trip</button></span></div>
-    <div class="row">52-T <span><button onclick="brk('bus_tie',1)">close</button>
-      <button onclick="brk('bus_tie',0)">trip</button></span></div>
-    <div class="row">52-L <span><button onclick="brk('load',1)">close</button>
-      <button onclick="brk('load',0)">trip</button></span></div>
-    <div id="toast" style="margin-top:.6em;font-size:.78em;color:#7fd4c1;min-height:1.1em"></div>
+  <div class="col col-right">
+    <div class="panel">
+      <h2>Metering &amp; Trends</h2>
+      <div class="body">
+        <div class="trend-cap"><span>Bus A frequency</span><b id="tr-freq-cap">-- Hz</b></div>
+        <svg class="chart" id="chart-freq" viewBox="0 0 220 52" preserveAspectRatio="none"></svg>
+        <div class="trend-cap"><span>Feeder 1 demand</span><b id="tr-load-cap">-- MW</b></div>
+        <svg class="chart" id="chart-load" viewBox="0 0 220 52" preserveAspectRatio="none">
+          <polyline id="load-line" fill="none" stroke="var(--brand)" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Key Status</h2>
+      <div class="body">
+        <div class="kv"><span class="l">Bus A voltage</span><span class="v" id="v-volt">--</span></div>
+        <div class="kv"><span class="l">Feeder 1 demand</span><span class="v" id="v-load">--</span></div>
+        <div class="kv"><span class="l">Frequency</span><span class="v" id="v-freq">--</span></div>
+        <div class="kv"><span class="l">RTU CPU</span><span class="v" id="v-cpu">--</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Feeder Breaker Controls</h2>
+      <div class="body">
+        <div class="brk-ctl" data-b="feeder">
+          <div class="brk-ctl-head"><span>52-F FEEDER</span><span id="lockic-feeder">&#128275;</span></div>
+          <div class="brk-ctl-btns">
+            <button onclick="brk('feeder',0)">OPEN</button>
+            <button onclick="brk('feeder',1)">CLOSE</button>
+            <button class="lockout" id="lockbtn-feeder" onclick="toggleLock('feeder')">LOCKOUT</button>
+          </div>
+        </div>
+        <div class="brk-ctl" data-b="bus_tie">
+          <div class="brk-ctl-head"><span>52-T BUS TIE</span><span id="lockic-bus_tie">&#128275;</span></div>
+          <div class="brk-ctl-btns">
+            <button onclick="brk('bus_tie',0)">OPEN</button>
+            <button onclick="brk('bus_tie',1)">CLOSE</button>
+            <button class="lockout" id="lockbtn-bus_tie" onclick="toggleLock('bus_tie')">LOCKOUT</button>
+          </div>
+        </div>
+        <div class="brk-ctl" data-b="load">
+          <div class="brk-ctl-head"><span>52-L LOAD</span><span id="lockic-load">&#128275;</span></div>
+          <div class="brk-ctl-btns">
+            <button onclick="brk('load',0)">OPEN</button>
+            <button onclick="brk('load',1)">CLOSE</button>
+            <button class="lockout" id="lockbtn-load" onclick="toggleLock('load')">LOCKOUT</button>
+          </div>
+        </div>
+        <div id="toast"></div>
+      </div>
+    </div>
   </div>
 </div>
+
+<footer>
+  <div class="status">
+    <span class="dot" id="comm-dot"></span>
+    <span>PLC communication: <b id="comm-txt">--</b></span>
+  </div>
+  <div>
+    <span id="ftr-user">{{ user }}</span><span class="role">operator level</span>
+    <a href="/logout">sign out</a>
+  </div>
+</footer>
+
+<div class="pop" id="dlg" hidden><div class="box">
+  <h3><span id="dlg-title">Dialog</span><button onclick="hide('dlg')">&times;</button></h3>
+  <div class="body" id="dlg-body"></div>
+</div></div>
+
 <script>
 const $ = id => document.getElementById(id);
-function sw(el, closed){ el.setAttribute('fill', closed ? '#2e7d68' : '#b00020'); }
-function txt(el, closed){ el.textContent = closed ? 'CLOSED' : 'OPEN';
-  el.className = closed ? 'ok' : 'alarm'; }
-async function tick(){
-  let r; try { r = await (await fetch('/api/state')).json(); } catch(e){ return; }
-  if(r.error) return;
-  $('v-freq').textContent = r.pv.freq_hz.toFixed(3) + ' Hz';
-  $('v-volt').textContent = r.pv.voltage_kv + ' kV';
-  $('v-load').textContent = r.pv.load_mw + ' MW';
-  $('v-cpu').textContent = r.cpu_mode;
-  $('v-cpu').className = r.cpu_mode === 'RUN' ? 'ok' : 'alarm';
-  $('freq').textContent = r.pv.freq_hz.toFixed(2) + ' Hz';
-  $('loadmw').textContent = r.pv.load_mw + ' MW';
-  sw($('b-feeder'), r.breakers.feeder); sw($('b-tie'), r.breakers.bus_tie);
-  sw($('b-load'), r.breakers.load);
-  txt($('s-feeder'), r.breakers.feeder); txt($('s-tie'), r.breakers.bus_tie);
-  txt($('s-load'), r.breakers.load);
-  const off = Math.abs(r.pv.freq_hz - 50.0) > 0.5;
-  const stopped = r.cpu_mode !== 'RUN';
-  $('alarm').textContent = stopped
-    ? '⚠ RTU CPU IN STOP — CONTROL LOST'
-    : '⚠ FREQUENCY EXCURSION';
-  $('alarm').style.display = (off || stopped) ? 'block' : 'none';
-  $('freq').setAttribute('fill', off ? '#ff8a80' : '#e0b96b');
+const USER = {{ user|tojson }};
+$('ftr-user').textContent = USER;
+
+/* ---------- clock ---------- */
+function clock(){
+  const d = new Date();
+  $('clk-t').textContent = d.toLocaleTimeString('en-US',{hour12:false});
+  $('clk-d').textContent = d.toLocaleDateString('en-US',
+    {weekday:'short', year:'numeric', month:'short', day:'numeric'});
 }
-function toast(msg){ $('toast').textContent = msg;
-  clearTimeout(toast.t); toast.t = setTimeout(()=>{$('toast').textContent='';}, 3000); }
+setInterval(clock,1000); clock();
+
+/* ---------- nav ---------- */
+document.querySelectorAll('.navbtns button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const nav = b.dataset.nav;
+    if(nav==='overview') return;
+    if(nav==='settings') return openSettings();
+    if(nav==='diag') return openDiag();
+    if(nav==='reports') return openReports();
+    toast('screen not in this build');
+  });
+});
+
+function show(id){ $(id).hidden=false; }
+function hide(id){ $(id).hidden=true; }
+
+function openSettings(){
+  $('dlg-title').textContent = 'Settings — Generation Setpoint';
+  const cur = ST ? ST.sp.gen_setpoint_mw : '';
+  $('dlg-body').innerHTML = `
+    <div class="kv"><span class="l">Local generation setpoint</span>
+      <span><input id="sp-gen" type="number" step="0.1" value="${cur}"> MW
+      <button class="act" onclick="setGen()">set</button></span></div>
+    <div class="note">Writes DB1 offset 10 (GEN_SETPOINT_MW_X10) on the substation RTU.</div>`;
+  show('dlg');
+}
+async function setGen(){
+  const v = $('sp-gen').value;
+  try {
+    const res = await fetch('/api/cmd',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sp:v})});
+    const j = await res.json();
+    toast(j.error ? ('✗ ' + j.error) : ('→ generation setpoint = ' + v + ' MW'));
+    if(!j.error) logEvent('L', 'Generation setpoint set to ' + v + ' MW by ' + USER, 'SET');
+  } catch(e){ toast('✗ ' + e); }
+  hide('dlg');
+  setTimeout(tick, 300);
+}
+
+function openDiag(){
+  $('dlg-title').textContent = 'Diagnostics';
+  renderDiag();
+  show('dlg');
+}
+function renderDiag(){
+  if(!$('dlg-title')) return;
+  $('dlg-body').innerHTML = ST ? `
+    <div class="kv"><span class="l">RTU host</span><span class="v">${ST.diag.plc_host}</span></div>
+    <div class="kv"><span class="l">RTU CPU mode</span><span class="v">${ST.cpu_mode}</span></div>
+    <div class="kv"><span class="l">RTU scan count</span><span class="v">${ST.diag.scan_count}</span></div>
+    <div class="kv"><span class="l">PLC communication</span><span class="v">${commOnline ? 'ONLINE' : 'OFFLINE'}</span></div>
+    <button class="act" onclick="renderDiag()" style="margin-top:.6em">refresh</button>
+    <div class="note">Scan count increments every RTU program cycle &mdash; a value that stops
+      changing between refreshes means the CPU has stopped scanning.</div>`
+    : '<div class="dim">no data</div>';
+}
+
+function openReports(){
+  $('dlg-title').textContent = 'Reports — Session Event Log';
+  $('dlg-body').innerHTML = LOG.length ? `
+    <table class="log"><thead><tr><th>Time</th><th>Pri</th><th>Description</th><th>Status</th></tr></thead>
+    <tbody>${LOG.map(e=>`<tr class="${e.status==='ACTIVE'?'active':''}">
+      <td>${e.t.toLocaleTimeString('en-US',{hour12:false})}</td>
+      <td>${e.pri}</td><td>${e.desc}</td><td>${e.status}</td></tr>`).join('')}</tbody></table>
+    <div class="note">Session-only: this report clears on page reload, there is no historian-backed archive.</div>`
+    : '<div class="dim">no events this session</div>';
+  show('dlg');
+}
+
+/* ---------- lockout (HMI-side only, no PLC tag) ---------- */
+const LOCK = {feeder:false, bus_tie:false, load:false};
+const LABEL = {feeder:'52-F feeder', bus_tie:'52-T bus tie', load:'52-L load'};
+function renderLock(b){
+  const locked = LOCK[b];
+  $('lockic-'+b).innerHTML = locked ? '&#128274;' : '&#128275;';
+  const btn = $('lockbtn-'+b);
+  btn.textContent = locked ? 'UNLOCK' : 'LOCKOUT';
+  btn.classList.toggle('active', locked);
+  const card = document.querySelector(`.brk-ctl[data-b="${b}"]`);
+  card.querySelectorAll('.brk-ctl-btns button:not(.lockout)').forEach(x=>x.disabled = locked);
+}
+function toggleLock(b){
+  LOCK[b] = !LOCK[b];
+  renderLock(b);
+  logEvent('M', LABEL[b] + (LOCK[b] ? ' locked out' : ' lockout released'), LOCK[b] ? 'LOCKED' : 'CLEARED');
+}
+Object.keys(LOCK).forEach(renderLock);
+
+/* ---------- alarm & event log ---------- */
+let LOG = [];
+function logEvent(pri, desc, status){
+  LOG.unshift({t:new Date(), pri, desc, status});
+  if(LOG.length>40) LOG.length = 40;
+  renderLog();
+}
+function renderLog(){
+  $('log-body').innerHTML = LOG.length ? LOG.map(e=>`
+    <tr class="${e.status==='ACTIVE'?'active':''}">
+      <td>${e.t.toLocaleTimeString('en-US',{hour12:false})}</td>
+      <td>${e.pri}</td>
+      <td>${e.desc}</td>
+      <td>${e.status}</td>
+    </tr>`).join('') : '<tr><td colspan="4" class="dim">no events this session</td></tr>';
+}
+
+/* ---------- trend history (client-side rolling buffer) ---------- */
+const HIST_MAX = 24;
+let HIST = [];
+function pushHist(freq, load){
+  HIST.push({freq, load});
+  if(HIST.length > HIST_MAX) HIST.shift();
+}
+function renderTrend(){
+  const W=220,H=52,n=HIST_MAX,bw=Math.max(1,(W/n)-2);
+  let bars='';
+  HIST.forEach((h,i)=>{
+    const dev = Math.min(1, Math.abs(h.freq-50)/0.5);
+    const bh = Math.max(2, dev*H);
+    const x = i*(W/n);
+    const color = dev>0.6 ? 'var(--bad)' : (dev>0.25?'var(--warn)':'var(--ok)');
+    bars += `<rect x="${x.toFixed(1)}" y="${(H-bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${color}"/>`;
+  });
+  $('chart-freq').innerHTML = bars;
+
+  const lVals = HIST.map(h=>h.load);
+  const lo = Math.min(...lVals), hi = Math.max(...lVals);
+  const span = Math.max(0.1, hi-lo);
+  const pts = HIST.map((h,i)=>{
+    const x = i*(W/Math.max(1,n-1));
+    const y = H - ((h.load-lo)/span)*H;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  $('load-line').setAttribute('points', pts);
+}
+
+/* ---------- device rendering ---------- */
+function statusPill(el, closed){
+  el.textContent = closed ? 'CLOSED' : 'OPEN';
+  el.setAttribute('fill', closed ? 'var(--ok)' : 'var(--bad)');
+}
+function sw(el, closed){ el.setAttribute('fill', closed ? '#2e6b52' : '#5a2a28'); }
+function energize(id, live){ $(id).setAttribute('stroke', live ? 'var(--brand)' : 'var(--neutral)'); }
+
+/* place status text next to each breaker box (SVG can't do CSS ::after) */
+function positionStatus(id, x, y){ const el=$(id); el.setAttribute('x',x); el.setAttribute('y',y); }
+positionStatus('s-feeder', 214, 146);
+positionStatus('s-tie', 152, 232);
+positionStatus('s-load', 282, 232);
+
+let ALARMS = {freq:false, rtu:false};
+let commOnline = null;
+let ST = null;
+
+async function tick(){
+  let r;
+  try { r = await (await fetch('/api/state')).json(); }
+  catch(e){ setComm(false); return; }
+  if(r.error){ setComm(false); return; }
+  setComm(true);
+  ST = r;
+
+  const freq = r.pv.freq_hz, volt = r.pv.voltage_kv, load = r.pv.load_mw;
+
+  $('v-freq').textContent = freq.toFixed(3) + ' Hz';
+  $('v-volt').textContent = volt + ' kV';
+  $('v-load').textContent = load + ' MW';
+  $('v-cpu').textContent = r.cpu_mode;
+  $('v-cpu').className = 'v ' + (r.cpu_mode==='RUN' ? '' : 'pill bad');
+
+  $('t-buskv').textContent = volt + ' kV';
+  $('t-loadmw').textContent = load + ' MW';
+  const amps = volt>0 ? Math.round((load*1000)/(volt*Math.sqrt(3))) : 0;
+  $('t-loadamp').textContent = (r.breakers.load ? amps : 0) + ' A';
+  $('t-freq').textContent = freq.toFixed(2) + ' Hz';
+
+  sw($('b-feeder'), r.breakers.feeder); sw($('b-tie'), r.breakers.bus_tie); sw($('b-load'), r.breakers.load);
+  statusPill($('s-feeder'), r.breakers.feeder);
+  statusPill($('s-tie'), r.breakers.bus_tie);
+  statusPill($('s-load'), r.breakers.load);
+
+  /* energize flow: source is always live up to the open contacts; downstream
+     only if the upstream breaker is closed */
+  energize('ln-src', true); energize('ln-src2', true);
+  energize('ln-f-bus', r.breakers.feeder);
+  const busLive = r.breakers.feeder;
+  energize('ln-bus', busLive);
+  energize('ln-bus-tie', busLive); energize('ln-tie-end', busLive && r.breakers.bus_tie);
+  energize('ln-bus-load', busLive);
+  const loadLive = busLive && r.breakers.load;
+  energize('ln-load1', loadLive); energize('ln-load2', loadLive);
+  $('ln-arrow').setAttribute('fill', loadLive ? 'var(--brand)' : 'var(--neutral)');
+
+  const freqOff = Math.abs(freq - 50.0) > 0.5;
+  $('t-freq').setAttribute('fill', freqOff ? 'var(--bad)' : 'var(--ok)');
+
+  const rtuStopped = r.cpu_mode !== 'RUN';
+  if (freqOff && !ALARMS.freq) logEvent('H','Bus A frequency excursion','ACTIVE');
+  if (!freqOff && ALARMS.freq) logEvent('H','Bus A frequency excursion','CLEARED');
+  ALARMS.freq = freqOff;
+  if (rtuStopped && !ALARMS.rtu) logEvent('H','RTU CPU in STOP — control lost','ACTIVE');
+  if (!rtuStopped && ALARMS.rtu) logEvent('H','RTU CPU in STOP — control lost','CLEARED');
+  ALARMS.rtu = rtuStopped;
+
+  const activeCount = (ALARMS.freq?1:0) + (ALARMS.rtu?1:0);
+  $('st-health').textContent = activeCount ? 'ALARM' : 'OK';
+  $('st-health').className = 'pill ' + (activeCount ? 'bad' : 'ok');
+  $('st-demand').textContent = load + ' MW';
+  $('st-alarms').textContent = activeCount;
+  $('st-alarms').className = 'pill ' + (activeCount ? 'bad' : 'ok');
+
+  pushHist(freq, load);
+  renderTrend();
+  $('tr-freq-cap').textContent = freq.toFixed(3) + ' Hz';
+  $('tr-load-cap').textContent = load + ' MW';
+}
+
+function setComm(online){
+  if (commOnline === online) return;
+  commOnline = online;
+  $('comm-dot').className = 'dot ' + (online ? 'on' : 'off');
+  $('comm-txt').textContent = online ? 'ONLINE' : 'OFFLINE';
+}
+
+function toast(msg){
+  $('toast').textContent = msg;
+  clearTimeout(toast.t); toast.t = setTimeout(()=>{$('toast').textContent='';}, 3000);
+}
+
 async function brk(breaker, close){
+  if (LOCK[breaker]) { toast('⚠ ' + LABEL[breaker] + ' is locked out'); return; }
   try {
     const res = await fetch('/api/cmd',{method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({breaker,close})});
     const j = await res.json();
-    toast(j.warning ? ('⚠ ' + j.warning)
-          : ('→ 52-' + breaker[0].toUpperCase() + ' ' + (close ? 'close' : 'trip')));
+    const verb = close ? 'CLOSE' : 'OPEN';
+    toast(j.warning ? ('⚠ ' + j.warning) : ('→ ' + LABEL[breaker] + ' ' + verb));
+    logEvent('L', LABEL[breaker] + ' ' + verb + ' commanded by ' + USER,
+      j.warning ? 'QUEUED' : (close ? 'CLOSED' : 'OPEN'));
   } catch(e){ toast('✗ ' + e); }
   setTimeout(tick, 300);
 }
+
 tick(); setInterval(tick, 1500);
 </script>
