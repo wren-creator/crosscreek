@@ -97,6 +97,30 @@ docker exec -it crosscreek-attacker bash
 | `instructor/` | timed agenda, setup runbook, grading rubric, slide outlines, capstone CTF |
 | `setup.sh` `start.sh` `stop.sh` `status.sh` `reset.sh` | lifecycle scripts |
 
+## Tools
+
+What's actually running under the hood, protocol libraries first since
+they're the part worth knowing: the simulated controllers and the attack
+scripts on the other side of the wire both speak through the same three.
+
+| Protocol | Library | Where it's used |
+|---|---|---|
+| Modbus/TCP | `pymodbus` | water PLC, water HMI, historian, process-sim, `modbus_attack.py` |
+| EtherNet/IP (CIP) | `cpppo` | dosing PLC, process-sim, `cip_attack.py` |
+| S7comm | `python-snap7` | substation RTU, power HMI, historian, process-sim, `s7_attack.py` |
+
+Everything else:
+
+| Tool | Role |
+|---|---|
+| Docker Compose | the range itself, flat and segmented topologies |
+| `nftables` | the boundary firewall (`net/router-fw/`), separate flat/segmented rulesets |
+| Suricata 8 | ICS-aware IDS in segmented mode, custom rules in `net/ids/rules/` |
+| `nmap`, `tcpdump` | recon and packet capture on the attacker workstation |
+| Flask | every HMI, PLC runtime UI, and the historian's web front end |
+| plain HTML/CSS/JS + inline SVG | both HMIs, no framework, no CDN, the range runs fully offline |
+| `zip` | packages *Cross Creek 101* into a valid `.epub` (`docs/syllabus-epub/build-epub.sh`) |
+
 ## Services and ports
 
 | Service | Host bind | Purpose |

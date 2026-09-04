@@ -50,6 +50,18 @@
 <tr><td>Attacker workstation</td><td><code>docker exec -it crosscreek-attacker bash</code></td><td>scripts under <code>/opt/scripts</code></td></tr>
 </tbody>
 </table>
+
+<h3>What it's built from</h3>
+<p>Three protocol libraries carry every attack in this book, on both sides of the wire: the simulated controllers speak through them, and so does every script under <code>/opt/scripts</code>.</p>
+<table>
+<thead><tr><th>Protocol</th><th>Library</th><th>Where</th></tr></thead>
+<tbody>
+<tr><td>Modbus/TCP</td><td><code>pymodbus</code></td><td>water PLC, water HMI, <code>modbus_attack.py</code></td></tr>
+<tr><td>EtherNet/IP (CIP)</td><td><code>cpppo</code></td><td>dosing PLC, <code>cip_attack.py</code></td></tr>
+<tr><td>S7comm</td><td><code>python-snap7</code></td><td>substation RTU, power HMI, <code>s7_attack.py</code></td></tr>
+</tbody>
+</table>
+<p>Around that: Docker Compose for the range itself, <code>nftables</code> for the boundary firewall, Suricata 8 for the ICS-aware IDS in segmented mode, Flask behind every HMI and PLC runtime UI, and plain HTML/CSS/JS with inline SVG on the screens themselves, no framework, no CDN, because the range is meant to run fully offline.</p>
 <p>The instructor edition of the scenario guide, <code>docs/scenarios.md</code>, maps every one of the ten planted weaknesses to the exact command that proves it, the physical consequence in the simulation, and the fix, with its CISA Cross-Sector Cybersecurity Performance Goal and its ISA/IEC 62443 clause. You work from <code>docs/scenarios-trainee.md</code>, the same document with the fix removed.</p>
 
 <h2>Authorised Use</h2>
