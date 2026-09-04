@@ -86,8 +86,8 @@ docker exec -it crosscreek-attacker bash
 | `eng-ws/` | engineering workstation, holds PLC project files and creds: the pivot box |
 | `historian/` | data historian in the DMZ, one-way replication in segmented mode |
 | `net/router-fw/` | the boundary firewall, `flat` and `segmented` nftables rulesets |
-| `net/ids/` | Suricata + Zeek with ICS rules (segmented mode) |
-| `attacker/` | analyst workstation: nmap, pymodbus, pycomm3, python-snap7, tshark, scripts |
+| `net/ids/` | Suricata with ICS rules (segmented mode) |
+| `attacker/` | analyst workstation: nmap, pymodbus, cpppo, python-snap7, tcpdump, scripts |
 | `docs/scenarios.md` | instructor answer key: every planted weakness, exploit, physical effect, fix |
 | `docs/scenarios-trainee.md` | trainee copy with the fix removed |
 | `docs/architecture.md` | segments, addresses, volumes, toggles, and the tricky mechanics |
@@ -167,7 +167,7 @@ It is strictly local. Host ports bind to `127.0.0.1` only. The edge and field
 networks are `internal`. `start.sh` refuses to launch if any published port
 would bind beyond loopback; `status.sh` audits the running bindings and
 confirms the attacker container has no default route. The attack tooling is
-generic (pymodbus, pycomm3, python-snap7, nmap) and the scripts are hardcoded
+generic (pymodbus, cpppo, python-snap7, nmap) and the scripts are hardcoded
 to lab addresses. Keep the host offline or firewalled while the range is up.
 Never deploy Cross Creek to a shared, routable, or cloud network.
 
