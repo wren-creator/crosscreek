@@ -24,7 +24,8 @@ three simulated controllers that speak real protocols, Modbus/TCP, EtherNet/IP
 physical world: cut the antiscalant and the membranes foul, stop the loop pump
 and the pressure bleeds out, tamper the conductivity limit and off-spec water
 is released. The water HMI is styled after a STEMENS SIMATIX panel "Plant Overview";
-the power HMI is a single-line diagram. A firewall container sits on the
+the power HMI is a browser-based SCADA control center, single-line diagram,
+alarm log, metering trends, breaker controls. A firewall container sits on the
 boundary between the enterprise, DMZ, and OT segments. An attacker workstation
 sits on a hostile "edge" network with no route off the lab.
 
@@ -81,7 +82,7 @@ docker exec -it crosscreek-attacker bash
 | `plc/dosing-enip/` | Allen-Bradley-style NaOH dosing controller, EtherNet/IP (CIP) |
 | `plc/power-s7/` | STEMENS-style substation RTU, S7comm |
 | `process-sim/` | the physics: RO conductivity and recovery, DI tank and loop, bus frequency, breaker state |
-| `hmi/water/` `hmi/power/` | operator screens: a SIMATIX-style Plant Overview and a single-line diagram (Flask + SVG) |
+| `hmi/water/` `hmi/power/` | operator screens: a SIMATIX-style Plant Overview and a browser-based SCADA control center (Flask + SVG) |
 | `eng-ws/` | engineering workstation, holds PLC project files and creds: the pivot box |
 | `historian/` | data historian in the DMZ, one-way replication in segmented mode |
 | `net/router-fw/` | the boundary firewall, `flat` and `segmented` nftables rulesets |

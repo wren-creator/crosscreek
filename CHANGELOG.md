@@ -3,6 +3,35 @@
 All notable changes to Cross Creek are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **`hmi/power` is redrawn as a browser-based SCADA control center**, modelled
+  on a real utility switchyard control-room screen: a light header with a
+  co-op logo mark and live clock, a Station Status card, an Alarm & Event Log
+  driven off real conditions (frequency excursion, RTU CPU stop, every
+  breaker command) plus a Reports view of the same log, a taller single-line
+  diagram for the actual 3-breaker topology (52-F feeder, 52-T bus tie to a
+  normally-open Bus B, 52-L load through transformer T1) whose line segments
+  energize and de-energize off live breaker state, a Metering & Trends panel
+  (rolling client-side history, frequency bars and a load line), Key Status,
+  and Feeder Breaker Controls with OPEN / CLOSE / LOCKOUT per breaker
+  (lockout is HMI-side only, no new RTU tag). Login page recolored to match.
+- **The local generation setpoint is wired up.** `GEN_SETPOINT_MW_X10` has
+  existed in the RTU's S7 DB1 since the substation vertical shipped but had
+  no read, write, or UI anywhere; `hmi/power/app.py` now reports it in
+  `/api/state` and accepts an `{"sp": ...}` write in `/api/cmd`, and the
+  dashboard's Settings screen is a real setpoint editor for it. Diagnostics
+  now shows RTU host, CPU mode, live scan count, and comms status instead of
+  a stub.
+
+### Fixed
+
+- **The water HMI's Logon button did nothing.** The SIMATIX panel rebuild
+  (0.2.0) gave the title bar a Logon / Logoff pair; Logoff went to `/logout`
+  but Logon had no handler. Wired it to `/login`.
+
 ## [0.2.0] - 2026-09-03
 
 The water plant is now a reverse-osmosis demineralisation plant with a
