@@ -23,3 +23,7 @@
 - Blue-team dataset export (PCAP + Suricata EVE) for detection-engineering courses
 - If the EPUB joins the Gumroad catalogue, add a one-paragraph series entry to
   `../books/ROADMAP.md` in the existing per-book style
+- Add a donation banner: a small corner tip jar on the HMI pages, dismissable,
+  `localStorage`-persisted, pointing at the CashApp cashtag, never gating any
+  scenario. Matches the banner built for Packet Creek; keep the copy and the
+  behaviour consistent across all three ranges.
