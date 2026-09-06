@@ -3,17 +3,32 @@
 # beyond 127.0.0.1.
 #   --segmented   start with the defended topology (segmentation, allowlists,
 #                 IDS on, controller hardening) instead of the flat default
+#   --build       rebuild images before starting, so local edits to the HMIs
+#                 or other services are picked up without a full ./reset.sh
 set -uo pipefail
 cd "$(dirname "$0")"
 source ./lib.sh
 
 COMPOSE_ARGS=(-f docker-compose.yml)
 MODE="flat (vulnerable defaults)"
-if [ "${1:-}" = "--segmented" ]; then
-  COMPOSE_ARGS+=(-f docker-compose.segmented.yml)
-  MODE="segmented (defended)"
-  info "segmented topology selected"
-fi
+UP_ARGS=(-d)
+for arg in "$@"; do
+  case "$arg" in
+    --segmented)
+      COMPOSE_ARGS+=(-f docker-compose.segmented.yml)
+      MODE="segmented (defended)"
+      info "segmented topology selected"
+      ;;
+    --build)
+      UP_ARGS+=(--build)
+      info "rebuilding images before start"
+      ;;
+    *)
+      bad "unknown option: $arg  (expected --segmented and/or --build)"
+      exit 1
+      ;;
+  esac
+done
 
 require_docker
 
@@ -25,7 +40,7 @@ fi
 ok "all published ports bind to 127.0.0.1"
 
 info "starting containers"
-dc "${COMPOSE_ARGS[@]}" up -d
+dc "${COMPOSE_ARGS[@]}" up "${UP_ARGS[@]}"
 
 info "waiting for health (up to 150s)"
 deadline=$(( $(date +%s) + 150 ))
@@ -54,3 +69,4 @@ echo "  attacker shell:        docker exec -it crosscreek-attacker bash"
 echo "  instructor answer key: docs/scenarios.md"
 echo "  reset to golden state: ./reset.sh"
 echo "  defended run:          ./start.sh --segmented"
+echo "  rebuild then start:    ./start.sh --build"

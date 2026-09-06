@@ -12,6 +12,9 @@ All notable changes to Cross Creek are recorded here. Format follows
   pointing at the developer fund (Cash App `$britleywren`). Styled to each
   panel's own palette, no popup or modal, so it stays out of the way of the
   exercises.
+- **`start.sh --build`.** Rebuilds images before starting so local edits to
+  the HMIs or other services are picked up without a full `./reset.sh` (which
+  wipes lab state). Combines with `--segmented`, in either order.
 
 ### Changed
 

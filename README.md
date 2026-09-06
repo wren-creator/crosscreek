@@ -64,6 +64,10 @@ docker exec -it crosscreek-attacker bash
 # bring it up defended instead, and re-run the attacks
 ./start.sh --segmented
 
+# rebuild images first, to pick up local edits to the HMIs or other
+# services without wiping lab state (flags combine: ./start.sh --segmented --build)
+./start.sh --build
+
 # restore golden state between cohorts (also the Session 6 recovery drill)
 ./reset.sh
 
