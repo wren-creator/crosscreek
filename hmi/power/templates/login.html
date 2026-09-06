@@ -20,6 +20,9 @@
   button:hover{filter:brightness(1.1)}
   .err{color:var(--bad);font-size:.85em;margin-top:1em}
   .hint{color:var(--dim);font-size:.75em;margin-top:1.4em;border-top:1px dashed var(--border);padding-top:.8em}
+  .donate{color:var(--dim);font-size:.75em;line-height:1.55;margin-top:1em;
+          border-top:1px dashed var(--border);padding-top:.8em}
+  .donate b{color:var(--text);font-family:"Courier New",monospace;white-space:nowrap;font-weight:600}
 </style>
 <form class="panel" method="post">
   <div class="brand">
@@ -36,4 +39,9 @@
   <button>Sign in</button>
   {% if err %}<div class="err">{{ err }}</div>{% endif %}
   {% if hint %}<div class="hint">Factory default account is still active.</div>{% endif %}
+  <div class="donate">
+    Cross Creek is a free OT security training lab, built and maintained on personal time.
+    If it has been useful for your learning or teaching, please consider supporting the
+    developer fund via Cash App <b>$britleywren</b>. Entirely optional, and always appreciated.
+  </div>
 </form>

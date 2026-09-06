@@ -16,6 +16,9 @@
          font-weight:600;letter-spacing:.05em;cursor:pointer}
   .err{color:#c02626;font-size:.85em;margin-top:1em}
   .hint{color:#5b7a86;font-size:.75em;margin-top:1.4em;border-top:1px dashed #9fb0b7;padding-top:.8em}
+  .donate{color:#5b7a86;font-size:.75em;line-height:1.55;margin-top:1em;
+          border-top:1px dashed #9fb0b7;padding-top:.8em}
+  .donate b{color:#12324a;font-family:"Courier New",monospace;white-space:nowrap;font-weight:700}
 </style>
 <div class="panel">
   <div class="bez"><span class="s">STEMENS</span><span class="h">SIMATIX HMI</span></div>
@@ -28,5 +31,10 @@
     <button>Sign in</button>
     {% if err %}<div class="err">{{ err }}</div>{% endif %}
     {% if hint %}<div class="hint">Factory default account is still active.</div>{% endif %}
+    <div class="donate">
+      Cross Creek is a free OT security training lab, built and maintained on personal time.
+      If it has been useful for your learning or teaching, please consider supporting the
+      developer fund via Cash App <b>$britleywren</b>. Entirely optional, and always appreciated.
+    </div>
   </form>
 </div>

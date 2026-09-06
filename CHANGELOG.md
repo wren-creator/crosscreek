@@ -5,6 +5,14 @@ All notable changes to Cross Creek are recorded here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A support-the-lab note on both HMI login pages.** `hmi/power` and
+  `hmi/water` now carry a short, opt-in line beneath the sign-in form
+  pointing at the developer fund (Cash App `$britleywren`). Styled to each
+  panel's own palette, no popup or modal, so it stays out of the way of the
+  exercises.
+
 ### Changed
 
 - **`hmi/power` is redrawn as a browser-based SCADA control center**, modelled
