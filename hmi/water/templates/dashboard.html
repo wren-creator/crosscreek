@@ -377,3 +377,10 @@ async function tick(){
 }
 tick(); setInterval(tick,1500);
 </script>
+
+<!-- corner tip jar: self-contained, dismissible, localStorage-remembered, never gates anything -->
+<div id="tipjar" hidden style="position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;align-items:center;gap:10px;background:#12232e;color:#e6eef2;border:1px solid #2c4653;border-left:4px solid #4bb3d3;border-radius:10px;padding:10px 12px;font:13px/1.4 system-ui,sans-serif;max-width:340px;box-shadow:0 6px 20px #0007">
+  <span>Useful? There's a tip jar: <a href="https://cash.app/$britleywren" target="_blank" rel="noopener noreferrer" style="color:#4bb3d3;font-weight:700">$britleywren</a></span>
+  <button aria-label="dismiss" onclick="this.parentElement.hidden=true;try{localStorage.setItem('tipjar_dismissed','1')}catch(e){}" style="background:none;border:0;color:#9ab;font-size:16px;cursor:pointer;line-height:1">&times;</button>
+</div>
+<script>try{if(localStorage.getItem("tipjar_dismissed")!=="1")document.getElementById("tipjar").hidden=false}catch(e){document.getElementById("tipjar").hidden=false}</script>
