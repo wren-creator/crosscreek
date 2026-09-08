@@ -1,0 +1,15 @@
+$ORIGIN crosscreek-power.lab.
+$TTL 3600
+@       IN  SOA ns1.crosscreek-power.lab. hostmaster.crosscreek-power.lab. (
+            2026090802  ; serial
+            7200        ; refresh
+            3600        ; retry
+            1209600     ; expire
+            3600 )      ; minimum
+@       IN  NS   ns1.crosscreek-power.lab.
+@       IN  TXT  "v=spf1 ip4:172.30.10.0/24 -all"
+
+; public presence only
+ns1     IN  A    172.30.10.53
+www     IN  A    172.30.10.5
+vpn     IN  A    172.30.10.6

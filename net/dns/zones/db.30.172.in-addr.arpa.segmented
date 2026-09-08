@@ -1,0 +1,15 @@
+$ORIGIN 30.172.in-addr.arpa.
+$TTL 3600
+@       IN  SOA ns1.crosscreek-water.lab. hostmaster.crosscreek-water.lab. (
+            2026090802  ; serial
+            7200        ; refresh
+            3600        ; retry
+            1209600     ; expire
+            3600 )      ; minimum
+@       IN  NS   ns1.crosscreek-water.lab.
+
+; public presence only: a reverse sweep of the OT segment returns nothing
+53.10   IN  PTR  ns1.crosscreek-water.lab.
+5.10    IN  PTR  www.crosscreek-water.lab.
+6.10    IN  PTR  vpn.crosscreek-water.lab.
+7.10    IN  PTR  mail.crosscreek-water.lab.

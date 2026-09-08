@@ -1,0 +1,26 @@
+$ORIGIN crosscreek-power.lab.
+$TTL 3600
+@       IN  SOA ns1.crosscreek-power.lab. hostmaster.crosscreek-power.lab. (
+            2026090801  ; serial
+            7200        ; refresh
+            3600        ; retry
+            1209600     ; expire
+            3600 )      ; minimum
+@       IN  NS   ns1.crosscreek-power.lab.
+@       IN  TXT  "v=spf1 ip4:172.30.10.0/24 -all"
+@       IN  TXT  "cross creek power co-op | substation controls | shares eng-ws with the water plant"
+
+; --- public presence (stays in the segmented view too) ---
+ns1     IN  A    172.30.10.53
+www     IN  A    172.30.10.5
+vpn     IN  A    172.30.10.6
+
+; --- operations: substation HMI and RTU ---
+hmi-power   IN  A     172.30.40.11
+scada       IN  CNAME hmi-power.crosscreek-power.lab.
+plc-power   IN  A     172.30.40.22
+rtu         IN  CNAME plc-power.crosscreek-power.lab.
+
+; --- shared IT / engineering: the same boxes as the water plant ---
+eng-ws      IN  A     172.30.20.20
+historian   IN  A     172.30.20.30

@@ -4,7 +4,7 @@
 
 1. On a machine that matches the student environment, `git clone` the repo and run:
    ```bash
-   ./setup.sh            # builds all ten images (5–10 min the first time)
+   ./setup.sh            # builds all eleven images (5–10 min the first time)
    ./start.sh
    ./status.sh           # must end "audit clean"
    ./start.sh --segmented
@@ -37,6 +37,8 @@
 | `plc-power` unhealthy, logs show a snap7 error | slow first start | give it a minute; `docker compose restart plc-power` |
 | `process-sim` unhealthy | it starts before the PLCs are ready | it self-heals within ~15 s; check again |
 | attacker can't reach OT in flat mode | stale networks from a previous run | `./stop.sh --all` then `./setup.sh && ./start.sh` |
+| `recon.py dns` / `dig axfr` returns nothing in flat mode | `dns` still starting, or a stale image | `docker compose restart dns`; if it persists, `./start.sh --build` |
+| `nmap <hostname>` fails to resolve | attacker recreated without the `dns:` block | `docker compose up -d --force-recreate attacker` |
 | `ids` unhealthy in segmented mode | Suricata still loading rules | wait ~20 s; check `docker logs crosscreek-ids` |
 | HMI shows "plc unreachable" | PLC container restarted, HMI kept a dead socket | reload the page; the client reconnects |
 | nothing on `:9411` | you are in flat mode; the IDS only runs segmented | `./start.sh --segmented` |

@@ -8,6 +8,7 @@
    |                                                                           |
    |  edge-net 172.30.10.0/24   (the hostile "internet")                       |
    |    attacker 172.30.10.10  --- no default route (blackholed) ---+          |
+   |    dns      172.30.10.53   utility name server (AXFR open in flat)         |
    |                                                                |          |
    |                                            router-fw (nftables)|          |
    |  it-net 172.30.20.0/24  ------------  L3 / L3.5 boundary  ------+          |
@@ -83,6 +84,7 @@ defaults to the vulnerable value if `.env` is absent.
 | `EXPOSE_HMI_TO_EDGE` | 2 | (documentary) HMI reachable from the edge via the flat firewall | edge -> OT dropped |
 | `DEFAULT_CREDS` | 2 | HMI `admin/admin`, PLC pass `1100` | operator-set credentials |
 | `EXPOSE_REMOTE_ACCESS` | 2 | unauthenticated VNC-style port on `eng-ws` | remote access via the DMZ jump host only |
+| `DNS_AXFR_OPEN` | 2 | name server answers for the whole estate, zone transfer open to any client | split-horizon public view only, AXFR refused |
 | `MODBUS_WRITE_OPEN` | 3-5 | no validation; OpenPLC keyswitch in REMOTE | release-limit and setpoint clamps + keyswitch locked in RUN |
 | `S7_NO_PASSWORD` | 7 | stop-CPU / breaker-open unauthenticated | RTU forces RUN, ignores unauthenticated opens |
 | `ENIP_ALLOW_LOGIC_DOWNLOAD` | 8 | controller in REMOTE, logic-update service on | keyswitch RUN, service returns 403 |
@@ -90,6 +92,35 @@ defaults to the vulnerable value if `.env` is absent.
 | `IDS_ENABLED` | 6 | Suricata off (no `ids` container) | on, rules loaded |
 | `HISTORIAN_READONLY` | 6 | bidirectional historian link | one-way OT -> DMZ |
 | `VERBOSE_HMI_ERRORS` | - | stack traces and tag map leaked | generic errors |
+
+## The name server
+
+`dns` is CoreDNS, authoritative-only, no recursion and no upstream (offline
+like the rest of the range). It sits on `edge-net` at `172.30.10.53` with the
+attacker box, so the attacker queries it directly with no firewall in the
+path, the same way an external assessor queries a target's public name
+server. The `attacker` service points its `dns:` / `dns_search:` at it, so
+`nmap plc-water` and `dig axfr @172.30.10.53 crosscreek-water.lab` both work
+out of the box.
+
+`DNS_AXFR_OPEN` (from the segmented override) picks one of two full config
+sets the same way `router-fw` picks its nftables ruleset:
+
+- **flat (`1`)**: `Corefile.flat` plus the `.flat` zone files. Forward zones
+  for `crosscreek-water.lab` and `crosscreek-power.lab` with an A record for
+  every asset, a `scada` / `rtu` CNAME, a `www` / `vpn` / `mail` public
+  presence, an SPF-style TXT breadcrumb, and a `30.172.in-addr.arpa` reverse
+  zone that names the OT `/24`. Every zone has `transfer { to * }`, so
+  `dig axfr` from anywhere returns the lot. This is scenario 11.
+- **segmented (`0`)**: `Corefile.segmented` plus the `.segmented` zone files.
+  Split-horizon: only `ns1` / `www` / `vpn` / `mail` resolve, the OT and
+  engineering records and the OT PTRs are gone, and there is no `transfer`
+  block so AXFR returns `REFUSED`. From the edge, `plc-water.crosscreek-water.lab`
+  is `NXDOMAIN` and `nmap -sL` on the OT range returns bare addresses.
+
+Both "utilities" resolve `eng-ws` and `historian` to the same hosts: the zone
+transfer is where a student learns the water plant and the substation share an
+engineering workstation and a historian.
 
 ## Mechanics worth explaining in detail
 

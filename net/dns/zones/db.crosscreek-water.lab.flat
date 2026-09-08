@@ -1,0 +1,28 @@
+$ORIGIN crosscreek-water.lab.
+$TTL 3600
+@       IN  SOA ns1.crosscreek-water.lab. hostmaster.crosscreek-water.lab. (
+            2026090801  ; serial
+            7200        ; refresh
+            3600        ; retry
+            1209600     ; expire
+            3600 )      ; minimum
+@       IN  NS   ns1.crosscreek-water.lab.
+@       IN  MX   10 mail.crosscreek-water.lab.
+@       IN  TXT  "v=spf1 ip4:172.30.10.0/24 -all"
+@       IN  TXT  "cross creek water authority | ot owner: controls group | after-hours pager x4417"
+
+; --- public presence (stays in the segmented view too) ---
+ns1     IN  A    172.30.10.53
+www     IN  A    172.30.10.5
+vpn     IN  A    172.30.10.6
+mail    IN  A    172.30.10.7
+
+; --- operations: has no business in a zone the internet can pull ---
+hmi-water   IN  A     172.30.40.10
+scada       IN  CNAME hmi-water.crosscreek-water.lab.
+plc-water   IN  A     172.30.40.20
+plc-dosing  IN  A     172.30.40.21
+
+; --- shared IT / engineering: the same boxes serve the power plant ---
+eng-ws      IN  A     172.30.20.20
+historian   IN  A     172.30.20.30

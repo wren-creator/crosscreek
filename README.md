@@ -27,7 +27,10 @@ is released. The water HMI is styled after a STEMENS SIMATIX panel "Plant Overvi
 the power HMI is a browser-based SCADA control center, single-line diagram,
 alarm log, metering trends, breaker controls. A firewall container sits on the
 boundary between the enterprise, DMZ, and OT segments. An attacker workstation
-sits on a hostile "edge" network with no route off the lab.
+sits on a hostile "edge" network with no route off the lab, alongside the
+utility's own name server, which in the flat topology answers for the whole
+estate and lets anyone pull the zone, so recon starts from the utility name,
+not a handed-over address.
 
 The default (flat) topology is the *how the attacks work* half: the boundary
 forwards freely and every weakness is on. Run `./start.sh --segmented` for the
@@ -90,6 +93,7 @@ docker exec -it crosscreek-attacker bash
 | `eng-ws/` | engineering workstation, holds PLC project files and creds: the pivot box |
 | `historian/` | data historian in the DMZ, one-way replication in segmented mode |
 | `net/router-fw/` | the boundary firewall, `flat` and `segmented` nftables rulesets |
+| `net/dns/` | the utility name server (CoreDNS), `flat` zones with open AXFR / `segmented` split-horizon |
 | `net/ids/` | Suricata with ICS rules (segmented mode) |
 | `attacker/` | analyst workstation: nmap, pymodbus, cpppo, python-snap7, tcpdump, scripts |
 | `docs/scenarios.md` | instructor answer key: every planted weakness, exploit, physical effect, fix |
@@ -119,8 +123,9 @@ Everything else:
 |---|---|
 | Docker Compose | the range itself, flat and segmented topologies |
 | `nftables` | the boundary firewall (`net/router-fw/`), separate flat/segmented rulesets |
+| CoreDNS | the utility name server (`net/dns/`), open zone transfer in flat mode, split-horizon in segmented |
 | Suricata 8 | ICS-aware IDS in segmented mode, custom rules in `net/ids/rules/` |
-| `nmap`, `tcpdump` | recon and packet capture on the attacker workstation |
+| `nmap`, `dig`, `tcpdump` | recon, DNS enumeration, and packet capture on the attacker workstation |
 | Flask | every HMI, PLC runtime UI, and the historian's web front end |
 | plain HTML/CSS/JS + inline SVG | both HMIs, no framework, no CDN, the range runs fully offline |
 | `zip` | packages *Cross Creek 101* into a valid `.epub` (`docs/syllabus-epub/build-epub.sh`) |
@@ -136,17 +141,20 @@ Everything else:
 | dosing PLC (CIP) | `127.0.0.1:4840` | EtherNet/IP, container port 44818 |
 | substation RTU (S7) | `127.0.0.1:1020` | S7comm, container port 102 |
 | IDS events | `127.0.0.1:9411` | Suricata EVE tail, segmented mode only |
-| process-sim, historian, router-fw, eng-ws | not published | internal only |
+| process-sim, historian, router-fw, eng-ws, dns | not published | internal only (the attacker reaches `dns` on `edge-net`) |
 
 ## Scenarios
 
-Ten planted weaknesses in four groups, each tied to a published incident and
+Eleven planted weaknesses in four groups, each tied to a published incident and
 mapped to MITRE ATT&CK for ICS:
 
-- **Exposure and access** (3): internet-exposed HMI with default credentials
+- **Exposure and access** (4): internet-exposed HMI with default credentials
   (Aliquippa, 2023), an unauthenticated remote-access service to the OT LAN
-  (Oldsmar, 2021), and an engineering workstation reachable from the enterprise
-  net that holds project files and PLC credentials.
+  (Oldsmar, 2021), an engineering workstation reachable from the enterprise
+  net that holds project files and PLC credentials, and a name server that
+  answers for the whole estate and allows a zone transfer to any client, so
+  one `dig axfr` maps every controller by name (scenario 11, the recon step
+  the rest assume).
 - **Protocol abuse** (3): an unauthenticated Modbus write that stops the DI
   loop circulation pump (FrostyGoop, Lviv, 2024), a holding-register write that
   raises the release conductivity limit so off-spec water passes the quality

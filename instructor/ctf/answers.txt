@@ -8,3 +8,4 @@ flag5 | exact  | 2
 flag6 | one-of | 55|55.0
 flag7 | exact  | nonzero
 flag8 | regex  | CC ICS: edge host reaching a PLC protocol port
+flag9 | exact  | 5

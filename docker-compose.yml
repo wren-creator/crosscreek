@@ -196,15 +196,41 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- the utility's authoritative name server -----------------------
+  # A real small utility runs one for its public web/VPN presence; often it
+  # also answers for the internal estate and, on legacy configs, lets anyone
+  # pull the whole zone. Flat build: full forward + reverse zones, AXFR open.
+  # Segmented build: split-horizon public view only, AXFR refused.
+  dns:
+    <<: *common
+    build: ./net/dns
+    container_name: crosscreek-dns
+    environment:
+      DNS_AXFR_OPEN: "${DNS_AXFR_OPEN:-1}"
+    networks:
+      edge-net: { ipv4_address: 172.30.10.53 }
+    healthcheck:
+      test: ["CMD-SHELL", "nslookup ns1.crosscreek-water.lab 127.0.0.1 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   # --- attacker workstation, boxed in --------------------------------
   attacker:
     <<: *common
     build: ./attacker
     container_name: crosscreek-attacker
     cap_add: [NET_ADMIN, NET_RAW]
+    depends_on:
+      dns: { condition: service_healthy }
     environment:
       ROUTER_EDGE_IP: "172.30.10.2"
       LAB_SUBNETS: "172.30.0.0/16"
+    dns:
+      - 172.30.10.53
+    dns_search:
+      - crosscreek-water.lab
+      - crosscreek-power.lab
     networks:
       edge-net: { ipv4_address: 172.30.10.10 }
 

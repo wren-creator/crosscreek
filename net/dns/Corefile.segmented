@@ -1,0 +1,22 @@
+# SEGMENTED posture: split-horizon. The public view carries only what the
+# public needs (name server, web, VPN concentrator); every OT and engineering
+# record is gone, and AXFR is refused. An external assessor learns nothing
+# about the plant from DNS.
+
+crosscreek-water.lab:53 {
+    file /etc/coredns/active/db.crosscreek-water.lab
+    log
+    errors
+}
+
+crosscreek-power.lab:53 {
+    file /etc/coredns/active/db.crosscreek-power.lab
+    log
+    errors
+}
+
+30.172.in-addr.arpa:53 {
+    file /etc/coredns/active/db.30.172.in-addr.arpa
+    log
+    errors
+}

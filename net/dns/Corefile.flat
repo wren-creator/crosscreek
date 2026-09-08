@@ -1,0 +1,31 @@
+# FLAT posture: the utility name server answers for the whole estate and lets
+# anyone pull the zone. This is the misconfiguration the Session 2 recon lesson
+# is built on, not an exotic bug: legacy BIND boxes with `allow-transfer any`
+# still turn up on real assessments.
+
+crosscreek-water.lab:53 {
+    file /etc/coredns/active/db.crosscreek-water.lab
+    transfer {
+        to *
+    }
+    log
+    errors
+}
+
+crosscreek-power.lab:53 {
+    file /etc/coredns/active/db.crosscreek-power.lab
+    transfer {
+        to *
+    }
+    log
+    errors
+}
+
+30.172.in-addr.arpa:53 {
+    file /etc/coredns/active/db.30.172.in-addr.arpa
+    transfer {
+        to *
+    }
+    log
+    errors
+}

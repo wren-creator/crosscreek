@@ -11,6 +11,7 @@
 - [x] `docs/architecture.md`, `docs/scenarios.md` + trainee copy, `docs/verification.md`
 - [x] *Cross Creek 101* EPUB, seven sessions + bookends, builds clean
 - [x] Instructor kit: agenda, setup runbook, rubric, answer key, 7 slide decks, capstone CTF
+- [x] Recon by utility name: `dns` (CoreDNS) with open AXFR in flat / split-horizon in segmented, name-aware `recon.py`, scenario 11
 
 ## v2 and beyond
 

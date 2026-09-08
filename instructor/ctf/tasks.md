@@ -1,8 +1,8 @@
 # Cross Creek 101 CTF — tasks
 
-Flags 1–6 are on the flat range (`./start.sh`). Flags 7–8 need the segmented
-range (`./start.sh --segmented`). Work from the attacker box unless told
-otherwise: `docker exec -it crosscreek-attacker bash`.
+Flags 1–6 and flag 9 are on the flat range (`./start.sh`). Flags 7–8 need the
+segmented range (`./start.sh --segmented`). Work from the attacker box unless
+told otherwise: `docker exec -it crosscreek-attacker bash`.
 
 ## flag1 — the open door
 Log into the water HMI. What password worked for the `admin` account?
@@ -29,6 +29,12 @@ afterward. What integer does `LogicRev` show?
 On the flat range, trip the feeder breaker and the load breaker on the
 substation. Watch the power HMI. The frequency ramps until it is clamped. What
 value, in Hz, does it settle at? (Whole number.)
+
+## flag9 — the estate (flat)
+From the attacker box, run a reverse-DNS list scan of the OT segment against
+the utility's own name server: `nmap -Pn -sL 172.30.40.0/24`. Of the 254
+addresses in the range, how many come back with a reverse-DNS name? (Whole
+number. `recon.py dns` shows the same list.)
 
 ## flag7 — the wall (segmented)
 On the segmented range, run `recon.py sweep` from the attacker box, then read

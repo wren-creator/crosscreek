@@ -7,8 +7,8 @@ proof that the segmented range breaks every link. Score out of 100.
 
 | Points | Criteria |
 |---|---|
-| 30 | All eight steps run, each with the observed HMI/historian reading before and after, and the physical meaning stated |
-| 20 | Six or seven steps, effects observed |
+| 30 | All nine steps run (DNS recon through the two-step release), each with the observed HMI/historian reading before and after, and the physical meaning stated |
+| 20 | Seven or eight steps, effects observed |
 | 10 | Attacks run but effects not tied to a physical consequence |
 | 0 | Not attempted, or run against something other than the range |
 

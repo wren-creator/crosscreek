@@ -29,6 +29,10 @@ services:
     environment:
       S7_NO_PASSWORD: "0"                # stop-CPU / mode change require auth
 
+  dns:
+    environment:
+      DNS_AXFR_OPEN: "0"                 # split-horizon public view, AXFR refused
+
   hmi-water:
     environment:
       DEFAULT_CREDS: "0"

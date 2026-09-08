@@ -1,9 +1,14 @@
 # Cross Creek scenarios, instructor edition
 
-Ten planted weaknesses in four groups. Trainees work from
+Eleven planted weaknesses in four groups. Trainees work from
 `scenarios-trainee.md`, which is this file with the **Fix** line removed from
 each entry. Every command below was run from the `attacker` container against
 the running flat range.
+
+Scenario 11 (estate discovery via DNS) is numbered last but is the first thing
+a student does: it is the reconnaissance the other ten assume. It lives in
+Group A because it is the same failure as 1-3, something answering from the
+hostile network that should not have been.
 
 Every entry uses this shape:
 
@@ -65,6 +70,24 @@ python3 /opt/scripts/recon.py engws       # dumps notes.txt and water_plc.st
 ```
 **Physical consequence in the sim:** none directly; hands the attacker the credentials and the golden program used in scenarios 8 and 9.
 **Fix:** project files and credentials do not sit on an open share. Use a version-controlled project store with access control, keep secrets out of notes files, and network-isolate the engineering workstation (Levels 3/3.5). CISA CPG 2.L (secure credential storage), 2.Q (data at rest); ISA/IEC 62443 asset inventory and least privilege.
+
+### 11. Estate discovery via an open DNS zone transfer
+**Where:** `dns` 172.30.10.53, the utility's authoritative name server for `crosscreek-water.lab` and `crosscreek-power.lab`. It sits on `edge-net` with the attacker box, so there is no firewall in the path.
+**Numbered last, run first.** This is the reconnaissance the other ten scenarios assume you have already done.
+**Real-world parallel:** open `AXFR` is one of the oldest findings in the book and still turns up on utility assessments, usually a legacy BIND server with `allow-transfer { any; }`. Every recent ICS intrusion, Ukraine 2016, Oldsmar 2021, Aliquippa 2023, started with the attacker already knowing which host to talk to. DNS is one of the ways that knowledge gets handed over for free.
+**Vulnerability:** the name server answers for the internal estate, every HMI, PLC and the engineering workstation, and allows a zone transfer to any client. One query returns the whole asset inventory by function, with addresses. The reverse zone maps the OT `/24` too, so even with AXFR closed a `nmap -sL` still names every controller.
+**MITRE ATT&CK for ICS:** T0888 Remote System Information Discovery, T0846 Remote System Discovery; (enterprise) T1590.002 Gather Victim Network Information: DNS
+**Confirm / exploit with:**
+```bash
+python3 /opt/scripts/recon.py dns                 # AXFR both zones + a reverse sweep
+dig axfr @172.30.10.53 crosscreek-water.lab
+dig axfr @172.30.10.53 crosscreek-power.lab
+nmap -Pn -sL 172.30.40.0/24                       # names from reverse DNS, no packets to the hosts
+nmap -Pn -sT -p 22,102,502,8080,20000,44818 crosscreek-water.lab crosscreek-power.lab
+```
+The transfer also shows both "separate" utilities resolving `eng-ws` and `historian` to the same boxes: shared IT, worth a line in the report.
+**Physical consequence in the sim:** none directly. It turns a blind `/16` sweep into a handful of targeted connections and lowers the attacker's noise: `recon.py sweep` then scans seven named hosts instead of 254 addresses.
+**Fix:** split-horizon DNS. The public view carries only what the public needs (name server, web, VPN concentrator); OT and engineering records live in an internal view the edge cannot reach. Disable zone transfers except to named secondaries. `./start.sh --segmented` sets `DNS_AXFR_OPEN=0`: AXFR returns `REFUSED` and `plc-water.crosscreek-water.lab` is `NXDOMAIN` from the edge. CISA CPG 2.F (no exploitable internet-exposed services) and the "know your own estate" intent of 1.A (asset inventory); ISA/IEC 62443-3-3 SR 5.1 network segmentation, and the asset-inventory practice in 62443-2-1.
 
 ---
 
@@ -170,6 +193,7 @@ python3 /opt/scripts/push_logic_water.py          # upload a program that forces
 
 | Scenario | MITRE ATT&CK for ICS | CISA CPG | ISA/IEC 62443 |
 |---|---|---|---|
+| 11 Estate discovery via DNS AXFR | T0888, T0846 | 2.F, 1.A | 3-3 SR 5.1, 2-1 asset inventory |
 | 1 Internet-exposed HMI | T0883, T0812, T0822 | 2.A, 2.F, 2.W | zone boundary, SL-1 auth |
 | 2 Unauth remote access | T0822, T0886 | 2.H, 2.W | secure remote access |
 | 3 Eng-ws pivot | T0818, T0864 | 2.L, 2.Q | asset inventory, least privilege |

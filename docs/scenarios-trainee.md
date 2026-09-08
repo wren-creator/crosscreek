@@ -1,6 +1,7 @@
 # Cross Creek scenarios, trainee edition
 
-Ten planted weaknesses in four groups. This is the instructor edition with the
+Eleven planted weaknesses in four groups. Scenario 11 is numbered last but is
+where you start: it is the reconnaissance the rest assume. This is the trainee edition with the
 **Fix** paragraph removed from each entry: work out the remediation yourself,
 then check it against `scenarios.md`. Every command below was run from the
 `attacker` container against the running flat range.
@@ -55,6 +56,23 @@ nc -v 172.30.20.20 5900        # banner: "no authentication configured"
 python3 /opt/scripts/recon.py engws       # dumps notes.txt and water_plc.st
 ```
 **Physical consequence in the sim:** none directly; hands the attacker the credentials and the golden program used in scenarios 8 and 9.
+**Fix:** _work this out, then check the instructor edition._
+
+### 11. Estate discovery via an open DNS zone transfer
+**Where:** `dns` 172.30.10.53, the utility's authoritative name server for `crosscreek-water.lab` and `crosscreek-power.lab`. It sits on `edge-net` with the attacker box, so there is no firewall in the path.
+**Numbered last, run first.** This is the reconnaissance the other ten scenarios assume you have already done.
+**Vulnerability:** the name server answers for the internal estate, every HMI, PLC and the engineering workstation, and allows a zone transfer to any client. One query returns the whole asset inventory by function, with addresses. The reverse zone maps the OT `/24` too.
+**MITRE ATT&CK for ICS:** T0888 Remote System Information Discovery, T0846 Remote System Discovery; (enterprise) T1590.002 Gather Victim Network Information: DNS
+**Confirm / exploit with:**
+```bash
+python3 /opt/scripts/recon.py dns                 # AXFR both zones + a reverse sweep
+dig axfr @172.30.10.53 crosscreek-water.lab
+dig axfr @172.30.10.53 crosscreek-power.lab
+nmap -Pn -sL 172.30.40.0/24                       # names from reverse DNS, no packets to the hosts
+nmap -Pn -sT -p 22,102,502,8080,20000,44818 crosscreek-water.lab crosscreek-power.lab
+```
+The transfer also shows both "separate" utilities resolving `eng-ws` and `historian` to the same boxes.
+**Physical consequence in the sim:** none directly. It turns a blind `/16` sweep into a handful of targeted connections and lowers the attacker's noise.
 **Fix:** _work this out, then check the instructor edition._
 
 ---

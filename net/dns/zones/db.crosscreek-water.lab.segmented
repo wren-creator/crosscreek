@@ -1,0 +1,17 @@
+$ORIGIN crosscreek-water.lab.
+$TTL 3600
+@       IN  SOA ns1.crosscreek-water.lab. hostmaster.crosscreek-water.lab. (
+            2026090802  ; serial
+            7200        ; refresh
+            3600        ; retry
+            1209600     ; expire
+            3600 )      ; minimum
+@       IN  NS   ns1.crosscreek-water.lab.
+@       IN  MX   10 mail.crosscreek-water.lab.
+@       IN  TXT  "v=spf1 ip4:172.30.10.0/24 -all"
+
+; public presence only: nothing about the plant lives here
+ns1     IN  A    172.30.10.53
+www     IN  A    172.30.10.5
+vpn     IN  A    172.30.10.6
+mail    IN  A    172.30.10.7

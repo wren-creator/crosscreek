@@ -21,7 +21,7 @@ forced true) plus a quality degradation (scenario 5's antiscalant starve, or
 | Session | The point to land |
 |---|---|
 | 1 | The range is contained and you proved it. OT is a network that was never meant to have a hostile host, and it shows. |
-| 2 | The 2021–2024 water intrusions were exposure + default creds + an open share. No exploits. |
+| 2 | The 2021–2024 water intrusions were exposure + default creds + an open share. No exploits. Recon (scenario 11) is part of this: the estate was handed over by the utility's own name server before a single packet hit a PLC. |
 | 3 | Modbus has no security model. A read and a write are the same risk. Running PLC logic fights a coil write, so attack the register it reads. |
 | 4 | Vendor protocols give you *more*: stop a CPU, operate a breaker, rewrite the logic. The dangerous step is always the one that removes a safety. |
 | 5 | You broke every attack without patching a protocol. You changed who can talk to what and made the controllers stop trusting the network. |
@@ -31,7 +31,8 @@ forced true) plus a quality degradation (scenario 5's antiscalant starve, or
 ## Framework references students should be able to cite by the end
 
 - **MITRE ATT&CK for ICS**: the technique IDs in `scenarios.md` (T0812, T0836,
-  T0843, T0855, T0856, T0858, T0883, T0889 are the load-bearing ones)
+  T0843, T0855, T0856, T0858, T0883, T0889 are the load-bearing ones; T0888 /
+  T0846 for the DNS recon in scenario 11)
 - **CISA Cross-Sector CPGs**: 1.E (change management), 2.A (default passwords),
   2.F (no exploitable internet-exposed services), 2.H (MFA), 3.A (detection),
   5.A (segmentation), 7.A (backups)

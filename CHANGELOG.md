@@ -7,6 +7,27 @@ All notable changes to Cross Creek are recorded here. Format follows
 
 ### Added
 
+- **Reconnaissance by utility name (scenario 11).** A new `dns` service
+  (`net/dns/`, CoreDNS) is the utility's authoritative name server, on
+  `edge-net` at `172.30.10.53` alongside the attacker box. In the flat range
+  it answers for the whole estate, `crosscreek-water.lab` and
+  `crosscreek-power.lab` with an A record for every HMI, PLC, and the
+  engineering workstation, a `scada` / `rtu` CNAME, a `www` / `vpn` / `mail`
+  public presence, an SPF-style TXT breadcrumb, and a `30.172.in-addr.arpa`
+  reverse zone, and it allows a zone transfer to any client. One
+  `dig axfr @172.30.10.53 crosscreek-water.lab` maps the plant by function;
+  the transfer also shows both "utilities" sharing `eng-ws` and `historian`.
+  The `attacker` container now points its resolver at `dns` with both search
+  domains, so `nmap plc-water` and `dig axfr` work out of the box, and
+  `recon.py` grows a `dns` subcommand (AXFR both zones plus a reverse sweep)
+  while `recon.py sweep` scans the named hosts DNS returns instead of walking
+  the OT `/24`. `targets.py` keeps its "must be a 172.30 address" guard,
+  now applied after name resolution. The segmented override sets
+  `DNS_AXFR_OPEN=0`: split-horizon public view only, `AXFR` refused,
+  OT names `NXDOMAIN` from the edge. New CTF flag 9 (flat range). Scenario 11
+  is in Group A, numbered last because it is run first. Covered end to end in
+  `docs/scenarios.md`, `docs/architecture.md`, `docs/verification.md` (B0 /
+  D2), the Session 2 chapter and slides, and the instructor kit.
 - **A support-the-lab note on both HMI login pages.** `hmi/power` and
   `hmi/water` now carry a short, opt-in line beneath the sign-in form
   pointing at the developer fund (Cash App `$britleywren`). Styled to each

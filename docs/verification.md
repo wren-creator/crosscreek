@@ -19,7 +19,8 @@ defended re-run. All attacker commands are run inside `crosscreek-attacker`
 
 | # | Steps | Pass condition |
 |---|---|---|
-| B1 | `python3 /opt/scripts/recon.py sweep` then `recon.py creds` | sweep lists 172.30.40.10/.11/.20/.21/.22; creds prints `admin/admin -> ACCEPTED` for both HMIs |
+| B0 | `python3 /opt/scripts/recon.py dns` | AXFR of `crosscreek-water.lab` and `crosscreek-power.lab` succeeds and lists every HMI/PLC/eng-ws by name; reverse sweep names .40.10/.11/.20/.21/.22. `dig axfr @172.30.10.53 crosscreek-water.lab` returns the zone. `nmap -Pn -sT plc-water.crosscreek-water.lab` shows 502/8080 open. |
+| B1 | `python3 /opt/scripts/recon.py sweep` then `recon.py creds` | sweep resolves the named hosts and lists 172.30.40.10/.11/.20/.21/.22 with their ICS ports; creds prints `admin/admin -> ACCEPTED` for both HMIs |
 | B2 | `nc -v 172.30.20.20 5900` | connects; banner says "no authentication configured" |
 | B3 | `python3 /opt/scripts/recon.py engws` | prints `notes.txt` with the controller passwords and `water_plc.st` |
 | B4 | `python3 /opt/scripts/modbus_attack.py stop-loop`; watch water HMI 3PITC401 | loop pressure falls from 3.8 bar toward 0; `DI_LOOP_PRESS_LOW` latches within a few seconds |
@@ -45,7 +46,7 @@ defended re-run. All attacker commands are run inside `crosscreek-attacker`
 | # | Steps | Pass condition |
 |---|---|---|
 | D1 | `./start.sh --segmented` | comes up healthy including `crosscreek-ids` and `crosscreek-jumphost` |
-| D2 | re-run B1 | `recon.py sweep` finds nothing; `creds` cannot reach the HMIs |
+| D2 | re-run B0 then B1 | B0: `dig axfr` returns `REFUSED`, `plc-water.crosscreek-water.lab` is `NXDOMAIN`, `nmap -sL 172.30.40.0/24` returns bare addresses. B1: `recon.py sweep` finds nothing; `creds` cannot reach the HMIs |
 | D3 | re-run B4, B7, B9, B10 from the attacker | every attempt times out (firewall drop) |
 | D4 | `docker exec crosscreek-router-fw nft list ruleset \| grep CC-FW-DROP` | drop counter is climbing |
 | D5 | `curl -s http://127.0.0.1:9411/` | one alert per attempt above ("edge host reaching a PLC protocol port", etc.) |
