@@ -15,6 +15,7 @@ from flask import (
 import s7map as S
 
 PLC_HOST = os.environ.get("PLC_S7_HOST", "172.30.41.12")
+PLC_PORT = int(os.environ.get("PLC_S7_PORT", "10102"))
 DEFAULT_CREDS = os.environ.get("DEFAULT_CREDS", "1") == "1"
 VERBOSE = os.environ.get("VERBOSE_HMI_ERRORS", "1") == "1"
 ADMIN_USER = os.environ.get("HMI_ADMIN_USER", "admin")
@@ -28,7 +29,7 @@ _c = snap7.client.Client()
 def plc():
     if not _c.get_connected():
         # snap7's C client needs an IP, not a DNS name
-        _c.connect(socket.gethostbyname(PLC_HOST), 0, 1)
+        _c.connect(socket.gethostbyname(PLC_HOST), 0, 1, PLC_PORT)
     return _c
 
 

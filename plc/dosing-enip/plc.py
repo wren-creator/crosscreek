@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""plc-dosing: Cross Creek chlorine dosing controller (EtherNet/IP on :44818).
+"""plc-dosing: Cross Creek chlorine dosing controller (EtherNet/IP, on
+PLC_DOSING_PORT rather than the IANA default 44818).
 
 An embedded cpppo EtherNet/IP simulator carries the tags; a scan loop reads and
 writes them directly; a Flask service on :8080 is the unauthenticated
@@ -21,6 +22,7 @@ import cpppo.server.enip.main as enip
 from flask import Flask, Response, jsonify, request
 
 ALLOW_DL = os.environ.get("ENIP_ALLOW_LOGIC_DOWNLOAD", "1") == "1"
+ENIP_PORT = int(os.environ.get("PLC_DOSING_PORT", "54818"))
 TAGS = ["DoseSetpoint=REAL", "DoseRate=REAL", "FlowFeedback=REAL",
         "Mode=DINT", "LogicRev=DINT", "LogicForced=DINT"]
 
@@ -95,7 +97,7 @@ def logic_push():
 
 
 def run_enip():
-    enip.main(argv=["--address", "0.0.0.0:44818", *TAGS])
+    enip.main(argv=["--address", f"0.0.0.0:{ENIP_PORT}", *TAGS])
 
 
 def main():
@@ -106,7 +108,7 @@ def main():
     put("LogicRev", 1)
     put("LogicForced", 0)
     threading.Thread(target=scan_loop, daemon=True).start()
-    print(f"[plc-dosing] EtherNet/IP on :44818, "
+    print(f"[plc-dosing] EtherNet/IP on :{ENIP_PORT}, "
           f"keyswitch {'REMOTE' if ALLOW_DL else 'RUN'}")
     app.run(host="0.0.0.0", port=8080, threaded=True, use_reloader=False)
 

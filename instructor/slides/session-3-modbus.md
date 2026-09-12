@@ -6,8 +6,8 @@
 - That interlock is what you attack
 
 ## Slide 2: What Modbus is
-- 1979. Request/response over TCP 502. Coils (bits) and registers (16-bit words).
-- No auth, no session, no signing. Open port 502 = you are the HMI.
+- 1979. Request/response, TCP 502 by convention. Coils (bits) and registers (16-bit words).
+- No auth, no session, no signing. Open the Modbus port = you are the HMI, whatever port it's on (Cross Creek runs it on 10502, see Session 2's recon slide)
 - FrostyGoop's Modbus part was function code 6. The same call the HMI makes every second.
 
 ## Slide 3: Enumerate
@@ -34,4 +34,4 @@
 
 ## Slide 7: What you should notice
 - No credential, no exploit — and the only safety was an interlock an engineer coded, with a register you could turn off
-- Session 5 can't fix Modbus. It fixes who can reach 502, which setpoints the program accepts, and whether the release limit is writable at all.
+- Session 5 can't fix Modbus. It fixes who can reach the Modbus port, which setpoints the program accepts, and whether the release limit is writable at all.

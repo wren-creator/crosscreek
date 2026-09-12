@@ -22,10 +22,9 @@ def _pipe(ops):
 
 
 def read():
-    for dsc, _, _, _, sts, val in _pipe(
-        ["DoseSetpoint", "DoseRate", "FlowFeedback", "Mode", "LogicRev", "LogicForced"]
-    ):
-        print(f"    {dsc:<22} {val}  (sts {sts})")
+    tags = ["DoseSetpoint", "DoseRate", "FlowFeedback", "Mode", "LogicRev", "LogicForced"]
+    for tag, (_, _, _, _, sts, val) in zip(tags, _pipe(tags)):
+        print(f"    {tag:<22} {val}  (sts {sts})")
 
 
 def set_sp():

@@ -19,9 +19,9 @@
    |                                            |         jumphost  .40 (seg.)  |
    |                                            |                               |
    |                       ot-net 172.30.40.0/24 (single flat OT segment)       |
-   |                         hmi-water  .10      plc-water  .20  Modbus  502    |
-   |                         hmi-power  .11      plc-dosing .21  CIP     44818  |
-   |                         jumphost   .40      plc-power  .22  S7      102    |
+   |                         hmi-water  .10      plc-water  .20  Modbus  10502  |
+   |                         hmi-power  .11      plc-dosing .21  CIP     54818  |
+   |                         jumphost   .40      plc-power  .22  S7      10102  |
    |                                                                           |
    |                       sim-net 172.30.50.0/24 (internal, the field bus)     |
    |                         process-sim .5  <->  plc-water  .10                |
@@ -42,6 +42,17 @@
   way, and Session 5 is about fixing it. HMIs, PLCs and (in segmented mode)
   the jump host share `ot-net`; the boundary firewall is between OT and
   everything else, not inside OT.
+- **None of the three PLCs sits on its IANA-assigned default port.** Modbus,
+  S7comm and EtherNet/IP normally default to 502, 102 and 44818; here they run
+  on 10502, 10102 and 54818 (`PLC_WATER_PORT` / `PLC_POWER_PORT` /
+  `PLC_DOSING_PORT` in `.env.example`). `recon.py sweep`'s hardcoded default-
+  port list finds nothing here on purpose: `recon.py nmap` does the real
+  discovery, a full TCP range sweep followed by nmap's vendor NSE scripts
+  (`modbus-discover`, `s7-info`, `enip-info`) for whatever free device
+  name/model/firmware they can pull, though those scripts key off the
+  protocol's textbook port and often just say `unknown` here; `recon.py
+  registers` confirms it either way, talking the actual protocol and walking
+  the coil/register/tag map once the port is known.
 
 ## The boundary firewall
 

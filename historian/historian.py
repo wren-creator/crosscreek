@@ -18,8 +18,8 @@ from flask import Flask, jsonify
 from pymodbus.client import ModbusTcpClient
 
 READONLY = os.environ.get("HISTORIAN_READONLY", "0") == "1"
-MB_HOST, MB_PORT = os.environ.get("POLL_MODBUS", "172.30.40.20:502").split(":")
-S7_HOST, S7_PORT = os.environ.get("POLL_S7", "172.30.40.22:102").split(":")
+MB_HOST, MB_PORT = os.environ.get("POLL_MODBUS", "172.30.40.20:10502").split(":")
+S7_HOST, S7_PORT = os.environ.get("POLL_S7", "172.30.40.22:10102").split(":")
 DB = "/var/lib/historian/history.db"
 
 _conn = sqlite3.connect(DB, check_same_thread=False)

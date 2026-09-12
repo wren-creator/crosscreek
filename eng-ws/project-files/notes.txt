@@ -1,9 +1,9 @@
 Cross Creek WTP / Substation - controls quick reference
 (do not print, do not email - Jerry)
 
-  water PLC (OpenPLC)   172.30.40.20   web openplc / openplc     Modbus 502
-  dosing controller     172.30.40.21   keyswitch REMOTE          EtherNet/IP 44818
-  substation RTU        172.30.40.22   no station password set   S7 102
+  water PLC (OpenPLC)   172.30.40.20   web openplc / openplc     Modbus 10502 (moved off 502 after the audit, don't ask)
+  dosing controller     172.30.40.21   keyswitch REMOTE          EtherNet/IP 54818
+  substation RTU        172.30.40.22   no station password set   S7 10102
   water HMI             172.30.40.10   admin / admin
   power HMI             172.30.40.11   admin / admin
   historian             172.30.30.30

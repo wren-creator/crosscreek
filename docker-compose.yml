@@ -48,16 +48,17 @@ services:
     environment:
       MODBUS_WRITE_OPEN: "${MODBUS_WRITE_OPEN:-1}"
       PLC_WATER_PASS: "${PLC_WATER_PASS:-1100}"
+      PLC_WATER_PORT: "${PLC_WATER_PORT:-10502}"
       DEFAULT_CREDS: "${DEFAULT_CREDS:-1}"
       HMI_ALLOWLIST: "172.30.40.10,172.30.50.10"   # water HMI, process-sim
     ports:
-      - "127.0.0.1:5020:502"     # Modbus/TCP
+      - "127.0.0.1:5020:${PLC_WATER_PORT:-10502}"     # Modbus/TCP
       - "127.0.0.1:8073:8080"    # OpenPLC runtime web UI (logic upload, Session 4)
     networks:
       ot-net:  { ipv4_address: 172.30.40.20 }
       sim-net: { ipv4_address: 172.30.50.10 }
     healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',502),3)\""]
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',${PLC_WATER_PORT:-10502}),3)\""]
       interval: 15s
       timeout: 5s
       retries: 6
@@ -69,13 +70,14 @@ services:
     environment:
       ENIP_ALLOW_LOGIC_DOWNLOAD: "${ENIP_ALLOW_LOGIC_DOWNLOAD:-1}"
       PLC_DOSING_PASS: "${PLC_DOSING_PASS:-1100}"
+      PLC_DOSING_PORT: "${PLC_DOSING_PORT:-54818}"
     ports:
-      - "127.0.0.1:4840:44818"   # EtherNet/IP (CIP)
+      - "127.0.0.1:4840:${PLC_DOSING_PORT:-54818}"   # EtherNet/IP (CIP)
     networks:
       ot-net:  { ipv4_address: 172.30.40.21 }
       sim-net: { ipv4_address: 172.30.50.11 }
     healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',44818),3)\""]
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',${PLC_DOSING_PORT:-54818}),3)\""]
       interval: 15s
       timeout: 5s
       retries: 6
@@ -87,13 +89,14 @@ services:
     environment:
       S7_NO_PASSWORD: "${S7_NO_PASSWORD:-1}"
       PLC_POWER_PASS: "${PLC_POWER_PASS:-1100}"
+      PLC_POWER_PORT: "${PLC_POWER_PORT:-10102}"
     ports:
-      - "127.0.0.1:1020:102"     # S7comm
+      - "127.0.0.1:1020:${PLC_POWER_PORT:-10102}"     # S7comm
     networks:
       ot-net:  { ipv4_address: 172.30.40.22 }
       sim-net: { ipv4_address: 172.30.50.12 }
     healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',102),3)\""]
+      test: ["CMD-SHELL", "python3 -c \"import socket;socket.create_connection(('127.0.0.1',${PLC_POWER_PORT:-10102}),3)\""]
       interval: 15s
       timeout: 5s
       retries: 6
@@ -109,8 +112,11 @@ services:
       plc-power:  { condition: service_healthy }
     environment:
       PLC_WATER_HOST: "172.30.50.10"
+      PLC_WATER_PORT: "${PLC_WATER_PORT:-10502}"
       PLC_POWER_HOST: "172.30.50.12"
+      PLC_POWER_PORT: "${PLC_POWER_PORT:-10102}"
       PLC_DOSING_HOST: "172.30.50.11"
+      PLC_DOSING_PORT: "${PLC_DOSING_PORT:-54818}"
       TICK_SECONDS: "1.0"
     networks:
       sim-net: { ipv4_address: 172.30.50.5 }
@@ -127,6 +133,7 @@ services:
     container_name: crosscreek-hmi-water
     environment:
       PLC_MODBUS_HOST: "172.30.40.20"
+      PLC_MODBUS_PORT: "${PLC_WATER_PORT:-10502}"
       DEFAULT_CREDS: "${DEFAULT_CREDS:-1}"
       HMI_ADMIN_USER: "${HMI_ADMIN_USER:-admin}"
       HMI_ADMIN_PASS: "${HMI_ADMIN_PASS:-admin}"
@@ -147,6 +154,7 @@ services:
     container_name: crosscreek-hmi-power
     environment:
       PLC_S7_HOST: "172.30.40.22"
+      PLC_S7_PORT: "${PLC_POWER_PORT:-10102}"
       DEFAULT_CREDS: "${DEFAULT_CREDS:-1}"
       HMI_ADMIN_USER: "${HMI_ADMIN_USER:-admin}"
       HMI_ADMIN_PASS: "${HMI_ADMIN_PASS:-admin}"
@@ -183,8 +191,8 @@ services:
     container_name: crosscreek-historian
     environment:
       HISTORIAN_READONLY: "${HISTORIAN_READONLY:-0}"
-      POLL_MODBUS: "172.30.40.20:502"
-      POLL_S7: "172.30.40.22:102"
+      POLL_MODBUS: "172.30.40.20:${PLC_WATER_PORT:-10502}"
+      POLL_S7: "172.30.40.22:${PLC_POWER_PORT:-10102}"
     volumes:
       - historian-data:/var/lib/historian
     networks:

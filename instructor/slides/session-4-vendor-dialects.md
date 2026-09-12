@@ -1,13 +1,13 @@
 # Session 4 — Vendor Dialects (S7comm, EtherNet/IP)
 
 ## Slide 1: S7comm and the RTU (scenario 7)
-- the S7 controller family family, TCP 102. Carries stop/start/mode alongside data.
+- the S7 controller family family, TCP 102 by convention (Cross Creek runs it on 10102, see Session 2's recon slide). Carries stop/start/mode alongside data.
 - Often no password. Industroyer operated Kyiv breakers with protocol-native commands (2016).
 - `s7_attack.py trip feeder` → island the bus; `trip load` → frequency ramps past 50.5 Hz
 - `s7_attack.py stop` → RTU frozen, operator keeps the screen, loses control
 
 ## Slide 2: EtherNet/IP + CIP (scenario 8)
-- Allen-Bradley, TCP 44818. Tag read/write unauthenticated. Keyswitch REMOTE = downloads allowed.
+- Allen-Bradley, TCP 44818 by convention (Cross Creek runs it on 54818). Tag read/write unauthenticated. Keyswitch REMOTE = downloads allowed.
 - `cip_attack.py set 15` → NaOH overdose → RO2 conductivity past the limit → **interlock still holds Release**
 - `cip_attack.py logic-push` → LogicForced, NaOH pump pinned 100%, loop conductivity climbs; release still needs scenario 5 or 9
 

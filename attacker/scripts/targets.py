@@ -1,20 +1,25 @@
 """Lab addresses. Every attack script imports these so nothing here can be
 pointed at an address that is not Cross Creek."""
 
+import os
 import socket
 
 HMI_WATER = "172.30.40.10"
 HMI_POWER = "172.30.40.11"
-PLC_WATER = "172.30.40.20"      # Modbus/TCP 502, OpenPLC UI 8080
-PLC_DOSING = "172.30.40.21"     # EtherNet/IP 44818, logic-update 8080
-PLC_POWER = "172.30.40.22"      # S7comm 102
+PLC_WATER = "172.30.40.20"      # Modbus/TCP, OpenPLC UI 8080
+PLC_DOSING = "172.30.40.21"     # EtherNet/IP, logic-update 8080
+PLC_POWER = "172.30.40.22"      # S7comm
 ENG_WS = "172.30.20.20"
 HISTORIAN = "172.30.20.30"
 OT_SUBNET = "172.30.40."        # /24
 
-MODBUS_PORT = 502
-ENIP_PORT = 44818
-S7_PORT = 102
+# None of these sits on its IANA-assigned default (Modbus 502, S7comm 102,
+# EtherNet/IP 44818), that's the point. `recon.py sweep` still checks the
+# defaults, on purpose, to show that assuming them finds nothing; use
+# `recon.py nmap` to actually discover what's listening.
+MODBUS_PORT = int(os.environ.get("PLC_WATER_PORT", "10502"))
+ENIP_PORT = int(os.environ.get("PLC_DOSING_PORT", "54818"))
+S7_PORT = int(os.environ.get("PLC_POWER_PORT", "10102"))
 HTTP_PORT = 8080
 
 # The utility's own DNS. In the flat range this name server answers for the

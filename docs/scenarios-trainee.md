@@ -19,6 +19,48 @@ ls /opt/scripts
 
 ---
 
+## Recon methodology: don't assume the port
+
+None of the three PLCs in this range sits on its IANA-assigned default port
+(Modbus 502, S7comm 102, EtherNet/IP 44818; see `PLC_WATER_PORT` /
+`PLC_POWER_PORT` / `PLC_DOSING_PORT` in `.env.example`). That's deliberate. A
+real assessment can't assume the default either, and treating a hardcoded
+ICS-port list as the whole recon phase is exactly the mistake that gets
+written up as "three PLCs, no findings."
+
+**Standard methodology, in order:**
+1. **Full port discovery.** `nmap -Pn -sS -p- --min-rate 2000 <host>` (the
+   attacker container carries `NET_RAW` for the SYN scan; without it, `-sT`
+   works the same way, just slower), or `python3 /opt/scripts/recon.py nmap`,
+   which runs this against every host DNS handed you. A default `nmap` run
+   only checks the top 1000 ports and will miss all three field protocols
+   here.
+2. **Service, name, model and version, where nmap can get it for free.**
+   Point nmap's vendor NSE scripts at whatever came back open: `nmap -Pn -sV
+   --script modbus-discover,s7-info,enip-info -p<port> <host>`. Each script
+   speaks enough of its protocol's own identification exchange to pull
+   device type, model, serial number and firmware/revision, and `recon.py
+   nmap` runs this stage automatically against whatever step 1 found. **The
+   catch:** all three scripts key off the protocol's textbook port (or a
+   service name nmap already recognised), so on a moved port like these they
+   often print nothing, `-sV` just reports `unknown`. That's not a dead end,
+   it's the reason step 3 exists.
+3. **Register / tag enumeration confirms it either way.** `python3
+   /opt/scripts/recon.py registers` talks the actual protocol, no generic
+   scanner heuristics involved, and dumps `plc-water`'s coils, discrete
+   inputs, holding and input registers, `plc-power`'s raw DB1 bytes, and
+   `plc-dosing`'s known CIP tags. Modbus and S7 addressing is numeric and
+   carries no data dictionary, so this is a genuine blind walk;
+   matching the raw values to `3P401`, `HR_COND_LIMIT_US` and so on is
+   scenario-specific and comes from cross-referencing the HMI or the
+   engineering workstation's project files (scenario 3).
+
+Every scenario below still gives the exact `host:port` to attack once you have
+found it; those numbers now reflect where the range actually put them, not
+the protocol's textbook default.
+
+---
+
 ## Group A, exposure and access
 
 ### 1. Internet-exposed HMI with default credentials
@@ -69,7 +111,7 @@ python3 /opt/scripts/recon.py dns                 # AXFR both zones + a reverse 
 dig axfr @172.30.10.53 crosscreek-water.lab
 dig axfr @172.30.10.53 crosscreek-power.lab
 nmap -Pn -sL 172.30.40.0/24                       # names from reverse DNS, no packets to the hosts
-nmap -Pn -sT -p 22,102,502,8080,20000,44818 crosscreek-water.lab crosscreek-power.lab
+nmap -Pn -sT -p 22,8080 crosscreek-water.lab crosscreek-power.lab   # the field protocols aren't in this list on purpose, see above
 ```
 The transfer also shows both "separate" utilities resolving `eng-ws` and `historian` to the same boxes.
 **Physical consequence in the sim:** none directly. It turns a blind `/16` sweep into a handful of targeted connections and lowers the attacker's noise.
@@ -80,9 +122,9 @@ The transfer also shows both "separate" utilities resolving `eng-ws` and `histor
 ## Group B, protocol abuse (Modbus/TCP against plc-water, the RO plant)
 
 ### 4. Unauthenticated write stops the DI distribution loop
-**Where:** `plc-water` 172.30.40.20:502, coil 4 (3P401 loop circulation pump)
+**Where:** `plc-water` 172.30.40.20:10502, coil 4 (3P401 loop circulation pump)
 **Real-world parallel:** FrostyGoop, Lviv, Ukraine, January 2024. Malware sent plain Modbus/TCP commands to ENCO controllers and knocked out heat to about 600 apartment buildings for two days.
-**Vulnerability:** Modbus/TCP has no authentication, no session, and no integrity check. Any host that can open port 502 can read and write every coil and register.
+**Vulnerability:** Modbus/TCP has no authentication, no session, and no integrity check. Any host that can open the Modbus port (10502 here, not the IANA default 502) can read and write every coil and register.
 **MITRE ATT&CK for ICS:** T0855 Unauthorized Command Message, T0831 Manipulation of Control, T0813 Denial of Control
 **Confirm / exploit with:**
 ```bash
@@ -93,7 +135,7 @@ python3 /opt/scripts/modbus_attack.py stop-loop    # 3P401 -> HAND, then STOP
 **Fix:** _work this out, then check the instructor edition._
 
 ### 5. Setpoint tampering: raise the release conductivity limit
-**Where:** `plc-water` 172.30.40.20:502, holding register 5 (`HR_COND_LIMIT_US`, x100)
+**Where:** `plc-water` 172.30.40.20:10502, holding register 5 (`HR_COND_LIMIT_US`, x100)
 **Real-world parallel:** Oldsmar, February 2021: the setpoint change itself was the attack (the sodium hydroxide setpoint went from ~100 to ~11,100 ppm).
 **Vulnerability:** the conductivity limit that gates "Release to Consumers" (release to the consumers) is a writable holding register with no range check.
 **MITRE ATT&CK for ICS:** T0836 Modify Parameter, T0806 Brute Force I/O (n/a), T0839 Module Firmware (n/a)
@@ -119,7 +161,7 @@ python3 /opt/scripts/modbus_attack.py starve-antiscalant # foul the membranes to
 ## Group C, vendor dialects
 
 ### 7. S7comm stop-CPU and breaker trip on the substation RTU
-**Where:** `plc-power` 172.30.40.22:102
+**Where:** `plc-power` 172.30.40.22:10102
 **Real-world parallel:** the stop-CPU and mode-change primitives are a documented class against S7-family devices; Industroyer/CRASHOVERRIDE used protocol-native commands to operate breakers on the Ukrainian grid in 2016.
 **Vulnerability:** the RTU accepts S7 PLC-control functions (stop, start, mode) and data-block writes with no station password.
 **MITRE ATT&CK for ICS:** T0816 Device Restart/Shutdown, T0858 Change Operating Mode, T0855 Unauthorized Command Message, T0879 Damage to Property
@@ -134,7 +176,7 @@ python3 /opt/scripts/s7_attack.py stop            # halt the RTU CPU
 **Fix:** _work this out, then check the instructor edition._
 
 ### 8. CIP tag write and unauthenticated logic push to the NaOH dosing controller
-**Where:** `plc-dosing` 172.30.40.21:44818 (EtherNet/IP) and :8080 (logic-update service). `plc-dosing` is the Allen-Bradley-style controller for the RO inter-pass NaOH (caustic) dosing, tags `DoseSetpoint`, `DoseRate`, `LogicRev`, `LogicForced`.
+**Where:** `plc-dosing` 172.30.40.21:54818 (EtherNet/IP) and :8080 (logic-update service). `plc-dosing` is the Allen-Bradley-style controller for the RO inter-pass NaOH (caustic) dosing, tags `DoseSetpoint`, `DoseRate`, `LogicRev`, `LogicForced`.
 **Real-world parallel:** Rockwell logic-download abuse; the CyberAv3ngers "IOControl" tooling manipulating OT devices in 2023-2024.
 **Vulnerability:** CIP tag writes are unauthenticated, and the controller is left in REMOTE with a program-download path that takes no credential.
 **MITRE ATT&CK for ICS:** T0843 Program Download, T0889 Modify Program, T0836 Modify Parameter

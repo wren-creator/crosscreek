@@ -137,9 +137,9 @@ Everything else:
 | water HMI | `127.0.0.1:8071` | water plant operator screen |
 | power HMI | `127.0.0.1:8072` | substation operator screen |
 | water PLC (OpenPLC UI) | `127.0.0.1:8073` | runtime web UI, used for the logic-download exercise |
-| water PLC (Modbus) | `127.0.0.1:5020` | Modbus/TCP, container port 502 |
-| dosing PLC (CIP) | `127.0.0.1:4840` | EtherNet/IP, container port 44818 |
-| substation RTU (S7) | `127.0.0.1:1020` | S7comm, container port 102 |
+| water PLC (Modbus) | `127.0.0.1:5020` | Modbus/TCP, container port 10502 (off the IANA default 502, see recon below) |
+| dosing PLC (CIP) | `127.0.0.1:4840` | EtherNet/IP, container port 54818 (off the IANA default 44818) |
+| substation RTU (S7) | `127.0.0.1:1020` | S7comm, container port 10102 (off the IANA default 102) |
 | IDS events | `127.0.0.1:9411` | Suricata EVE tail, segmented mode only |
 | process-sim, historian, router-fw, eng-ws, dns | not published | internal only (the attacker reaches `dns` on `edge-net`) |
 
@@ -166,6 +166,13 @@ mapped to MITRE ATT&CK for ICS:
 - **Impact and persistence** (2): a modified control program that forces the
   "Release to Consumers" release interlock permanently on, and a wiper-style
   HMI config clobber.
+
+None of the three PLCs listens on its IANA-assigned default port, so the
+recon phase isn't optional: `recon.py nmap` runs a full-range scan then tries
+nmap's `modbus-discover`, `s7-info`, and `enip-info` NSE scripts for
+whatever free device name/model/firmware they can pull, and `recon.py
+registers` confirms it either way by talking the actual protocol, walking
+the coil/register/tag map on each controller once you know the port.
 
 Trainees work from `docs/scenarios-trainee.md`. Instructors hold
 `docs/scenarios.md`, which adds the exact exploit, the physical consequence in

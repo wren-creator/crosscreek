@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""plc-power: Cross Creek substation RTU (S7comm on :102).
+"""plc-power: Cross Creek substation RTU (S7comm, on PLC_POWER_PORT rather
+than the IANA default 102).
 
 python-snap7 server exposing DB1 (bus values, breaker status, breaker commands).
 A scan loop acts on breaker commands and mirrors the virtual CPU run/stop state
@@ -22,6 +23,7 @@ from snap7.type import SrvArea
 import s7map as S
 
 NO_PASSWORD = os.environ.get("S7_NO_PASSWORD", "1") == "1"
+S7_PORT = int(os.environ.get("PLC_POWER_PORT", "10102"))
 CPU_RUN, CPU_STOP = 8, 4
 
 DB = (ctypes.c_uint8 * S.DB_SIZE)()
@@ -116,9 +118,9 @@ def api_state():
 def main():
     _seed()
     SRV.register_area(SrvArea.DB, S.DB_NUMBER, DB)
-    SRV.start()  # default TCP 102
+    SRV.start(tcp_port=S7_PORT)
     SRV.set_cpu_status(CPU_RUN)
-    print(f"[plc-power] S7comm on :102, DB{S.DB_NUMBER} ({S.DB_SIZE} bytes), "
+    print(f"[plc-power] S7comm on :{S7_PORT}, DB{S.DB_NUMBER} ({S.DB_SIZE} bytes), "
           f"{'no-password' if NO_PASSWORD else 'auth required'}")
     threading.Thread(target=scan_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=8080, threaded=True, use_reloader=False)

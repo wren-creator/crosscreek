@@ -27,9 +27,11 @@ from model_power import PowerState
 from model_water import RoWaterState
 
 WATER_HOST = os.environ.get("PLC_WATER_HOST", "172.30.41.10")
-WATER_PORT = int(os.environ.get("PLC_WATER_PORT", "502"))
+WATER_PORT = int(os.environ.get("PLC_WATER_PORT", "10502"))
 POWER_HOST = os.environ.get("PLC_POWER_HOST", "172.30.41.12")
+POWER_PORT = int(os.environ.get("PLC_POWER_PORT", "10102"))
 DOSING_HOST = os.environ.get("PLC_DOSING_HOST", "172.30.41.11")
+DOSING_PORT = int(os.environ.get("PLC_DOSING_PORT", "54818"))
 TICK = float(os.environ.get("TICK_SECONDS", "1.0"))
 
 water = RoWaterState()
@@ -113,7 +115,7 @@ def dosing_loop():
     while True:
         t0 = time.time()
         try:
-            with enip_client.connector(host=ip, port=44818, timeout=3) as conn:
+            with enip_client.connector(host=ip, port=DOSING_PORT, timeout=3) as conn:
                 ops = enip_client.parse_operations([
                     f"FlowFeedback=(REAL){water.feed_flow_m3h}",
                     "DoseRate", "LogicForced", "LogicRev",
@@ -158,7 +160,7 @@ def power_loop():
         try:
             if not client.get_connected():
                 # snap7's C client needs an IP, not a DNS name
-                client.connect(socket.gethostbyname(POWER_HOST), 0, 1)
+                client.connect(socket.gethostbyname(POWER_HOST), 0, 1, POWER_PORT)
             power_tick(client, TICK)
         except Exception as exc:
             print(f"[process-sim] power fault: {exc}")

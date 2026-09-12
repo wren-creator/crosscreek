@@ -2,7 +2,8 @@
 """plc-water: Cross Creek RO demineralisation plant soft PLC.
 
 Three concurrent parts:
-  * a real Modbus/TCP server on :502 (the field protocol students attack)
+  * a real Modbus/TCP server (the field protocol students attack), on
+    PLC_WATER_PORT rather than the IANA default 502, so recon has to find it
   * an OpenPLC-style scan loop that runs the control program every 200 ms
   * a runtime web UI on :8080 (view program, stop/start CPU, upload program)
 
@@ -30,6 +31,7 @@ import mapfile as M
 WRITE_OPEN = os.environ.get("MODBUS_WRITE_OPEN", "1") == "1"
 DEFAULT_CREDS = os.environ.get("DEFAULT_CREDS", "1") == "1"
 PLC_PASS = os.environ.get("PLC_WATER_PASS", "1100")
+MODBUS_PORT = int(os.environ.get("PLC_WATER_PORT", "10502"))
 RUNTIME_DIR = "/plc/logic/runtime"
 ACTIVE_PATH = os.path.join(RUNTIME_DIR, "active.py")
 GOLDEN_PATH = "/plc/logic/golden_water.py"
@@ -415,8 +417,8 @@ def main():
                                use_reloader=False),
         daemon=True,
     ).start()
-    print("[plc-water] Modbus/TCP on :502, runtime UI on :8080")
-    StartTcpServer(context=CTX, address=("0.0.0.0", 502))
+    print(f"[plc-water] Modbus/TCP on :{MODBUS_PORT}, runtime UI on :8080")
+    StartTcpServer(context=CTX, address=("0.0.0.0", MODBUS_PORT))
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ from pymodbus.client import ModbusTcpClient
 import watermap as W
 
 PLC_HOST = os.environ.get("PLC_MODBUS_HOST", "172.30.41.10")
-PLC_PORT = int(os.environ.get("PLC_MODBUS_PORT", "502"))
+PLC_PORT = int(os.environ.get("PLC_MODBUS_PORT", "10502"))
 DEFAULT_CREDS = os.environ.get("DEFAULT_CREDS", "1") == "1"
 VERBOSE = os.environ.get("VERBOSE_HMI_ERRORS", "1") == "1"
 ADMIN_USER = os.environ.get("HMI_ADMIN_USER", "admin")

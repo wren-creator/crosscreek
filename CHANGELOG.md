@@ -36,9 +36,34 @@ All notable changes to Cross Creek are recorded here. Format follows
 - **`start.sh --build`.** Rebuilds images before starting so local edits to
   the HMIs or other services are picked up without a full `./reset.sh` (which
   wipes lab state). Combines with `--segmented`, in either order.
+- **Real recon methodology in `recon.py`: `nmap` and `registers`.** `nmap`
+  runs a full-range SYN scan (`nmap -Pn -sS -p- --min-rate 2000`, the
+  attacker container carries `NET_RAW` for this) against every host DNS
+  handed you, then points nmap's vendor NSE scripts (`modbus-discover`,
+  `s7-info`, `enip-info`) at whatever came back open for whatever free
+  device name/model/firmware they can pull. Those scripts key off the
+  protocol's textbook port, so on a moved port they often come back
+  `unknown`, which is why `registers` exists: it talks the actual protocol
+  (pymodbus / python-snap7 / cpppo, no generic-scanner heuristics) and dumps
+  `plc-water`'s coils/discrete/holding/input registers, `plc-power`'s raw
+  DB1 bytes, and `plc-dosing`'s known CIP tags, a reliable confirmation
+  either way. Both are documented as a new "Recon methodology" section in
+  `docs/scenarios.md` / `docs/scenarios-trainee.md`, a new Session 2 slide,
+  and new verification
+  rows B1a/B1b.
 
 ### Changed
 
+- **None of the three PLCs listens on its IANA-assigned default port
+  anymore.** Modbus/TCP (`plc-water`), S7comm (`plc-power`), and EtherNet/IP
+  (`plc-dosing`) now default to 10502, 10102, and 54818 respectively,
+  configurable via `PLC_WATER_PORT` / `PLC_POWER_PORT` / `PLC_DOSING_PORT` in
+  `.env.example`, threaded through `plc/*/plc.py`, both HMIs, `process-sim`,
+  `historian`, the segmented nftables conduit, and the Suricata rules.
+  `recon.py sweep`'s hardcoded ICS-port list now finds nothing on any of the
+  three, on purpose: it demonstrates that assuming the default fails, and
+  hands off to the new `recon.py nmap` / `recon.py registers` (above). The
+  host-side published ports (`5020` / `4840` / `1020`) are unchanged.
 - **`hmi/power` is redrawn as a browser-based SCADA control center**, modelled
   on a real utility switchyard control-room screen: a light header with a
   co-op logo mark and live clock, a Station Status card, an Alarm & Event Log
