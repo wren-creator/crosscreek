@@ -11,7 +11,7 @@
 <p>Goal for this session: leave generic Modbus behind and speak the two vendor protocols that run most of the installed base, S7comm and Allen-Bradley's EtherNet/IP, and use each to do something Modbus could not: halt a CPU, operate a breaker, and replace a control program. This is scenarios 7, 8, and 9.</p>
 
 <h2>4.1 S7comm and the Substation RTU (Scenario 7)</h2>
-<p>STEMENS S7-300 and S7-400 controllers, and the RTUs built on that family, speak a protocol usually called S7comm over TCP port 102. Beyond reading and writing data blocks, it carries PLC-control functions: stop the CPU, start it, change its operating mode. On the older devices, and on plenty of newer ones that were never configured otherwise, none of that requires a password. Industroyer, the malware that opened breakers in Kyiv in 2016, used protocol-native commands like these.</p>
+<p>STEMENS S7-300 and S7-400 controllers, and the RTUs built on that family, speak a protocol usually called S7comm, conventionally over TCP port 102, though Cross Creek's own substation RTU is not on that port either, see 2.2. Beyond reading and writing data blocks, it carries PLC-control functions: stop the CPU, start it, change its operating mode. On the older devices, and on plenty of newer ones that were never configured otherwise, none of that requires a password. Industroyer, the malware that opened breakers in Kyiv in 2016, used protocol-native commands like these.</p>
 <pre>python3 /opt/scripts/s7_attack.py read
 python3 /opt/scripts/s7_attack.py trip feeder     # open breaker 52-F
 </pre>
@@ -21,7 +21,7 @@ python3 /opt/scripts/s7_attack.py trip feeder     # open breaker 52-F
 <p>Now the RTU is in STOP. The operator still has their screen, but their commands do nothing, and the last outputs are frozen. This is the quiet version of the attack: no dramatic excursion, just a substation that no longer answers its operator.</p>
 
 <h2>4.2 EtherNet/IP, CIP, and the NaOH Dosing Controller (Scenario 8)</h2>
-<p>Allen-Bradley controllers speak EtherNet/IP, which carries the Common Industrial Protocol, CIP, on TCP port 44818. On Cross Creek the CIP device is the controller for the RO inter-pass NaOH (caustic) dosing. Tag reads and writes are unauthenticated. If the controller keyswitch is in REMOTE, it will also accept a program download.</p>
+<p>Allen-Bradley controllers speak EtherNet/IP, which carries the Common Industrial Protocol, CIP, conventionally on TCP port 44818, moved on Cross Creek's dosing controller for the same reason as the other two, see 2.2. On Cross Creek the CIP device is the controller for the RO inter-pass NaOH (caustic) dosing. Tag reads and writes are unauthenticated. If the controller keyswitch is in REMOTE, it will also accept a program download.</p>
 <pre>python3 /opt/scripts/cip_attack.py read
 python3 /opt/scripts/cip_attack.py set 15         # write the DoseSetpoint tag
 </pre>

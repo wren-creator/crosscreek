@@ -8,7 +8,7 @@ OUT="../Cross-Creek-101-Syllabus.epub"
 rm -f "$OUT"
 
 zip -X -0 "$OUT" mimetype >/dev/null
-zip -X -9 -r "$OUT" META-INF OEBPS -x '.*' >/dev/null
+zip -X -9 -r "$OUT" META-INF OEBPS -x '.*' -x '*/.*' >/dev/null
 
 echo "built $OUT"
 unzip -l "$OUT"

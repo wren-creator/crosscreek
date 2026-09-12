@@ -15,7 +15,7 @@
 <p>That interlock is the safety you are going to attack.</p>
 
 <h2>3.2 What Modbus Is, and What It Is Not</h2>
-<p>Modbus is from 1979. It is a request-response protocol over what is now TCP port 502. A client asks to read or write coils (single bits, think pump run commands) or registers (16-bit words, think setpoints and sensor values). There is no authentication. There is no session. There is no signing. If you can open port 502, you are, as far as the PLC is concerned, the HMI.</p>
+<p>Modbus is from 1979. It is a request-response protocol, conventionally carried over TCP port 502, though as 2.2 showed, Cross Creek's own water PLC does not use that port. A client asks to read or write coils (single bits, think pump run commands) or registers (16-bit words, think setpoints and sensor values). There is no authentication. There is no session. There is no signing. If you can open the Modbus port, whatever number it is on, you are, as far as the PLC is concerned, the HMI.</p>
 <p>FrostyGoop, the malware that took the heat out of 600 buildings in Lviv in January 2024, was notable for being written in Go and for taking its target list from a config file. The Modbus part was not notable. It was function code 6, write single register, the same call the HMI makes every second.</p>
 
 <h2>3.3 Enumerate</h2>
@@ -48,7 +48,7 @@
 python3 - &lt;&lt;'PY'
 from pymodbus.client import ModbusTcpClient
 import time
-c = ModbusTcpClient("172.30.40.20", port=502); c.connect()
+c = ModbusTcpClient("172.30.40.20", port=10502); c.connect()
 while True:
     # IR 3 = RO2 conductivity, IR 6 = DI tank, IR 7 = loop pressure, IR 9 = loop return cond
     c.write_registers(3, [55], slave=1)          # 0.55 uS/cm, looks perfect
@@ -58,6 +58,6 @@ PY
 <p>Now run the antiscalant starve from 3.5 without raising the limit. The interlock in the PLC still knows the water is bad and holds Release, but the operator's screen shows 0.55 uS/cm and green, so nobody escalates, and an attacker who is also spoofing the Release coil completes the picture. This is Stuxnet's operator-facing trick in miniature: record normal, replay normal, run the process off-spec behind it.</p>
 
 <h2>3.7 What You Should Notice</h2>
-<p>Modbus gave you the plant with no credential and no exploit, and the only thing that saved the water quality was an interlock coded into the PLC program by an engineer who thought about failure, and even that had a register you could turn off. When you get to Session 5 you will not be able to fix Modbus, because Modbus cannot be fixed. You will fix everything around it: who can reach port 502, which setpoints the program will accept, whether the release limit can be written at all, and whether anyone would see a conductivity that climbed faster than a membrane can foul.</p>
+<p>Modbus gave you the plant with no credential and no exploit, and the only thing that saved the water quality was an interlock coded into the PLC program by an engineer who thought about failure, and even that had a register you could turn off. When you get to Session 5 you will not be able to fix Modbus, because Modbus cannot be fixed. You will fix everything around it: who can reach the Modbus port, which setpoints the program will accept, whether the release limit can be written at all, and whether anyone would see a conductivity that climbed faster than a membrane can foul.</p>
 </body>
 </html>
