@@ -1,0 +1,39 @@
+# Dependabot version updates. Weekly; minor and patch bumps grouped into one PR,
+# major bumps arrive separately so they can be tested on purpose.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directories:
+      - "/historian"
+      - "/hmi/power"
+      - "/hmi/water"
+      - "/plc/dosing-enip"
+      - "/plc/power-s7"
+      - "/plc/water-openplc"
+      - "/process-sim"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: "docker"
+    directories:
+      - "/attacker"
+      - "/eng-ws"
+      - "/historian"
+      - "/hmi/power"
+      - "/hmi/water"
+      - "/net/dns"
+      - "/net/ids"
+      - "/net/router-fw"
+      - "/plc/dosing-enip"
+      - "/plc/power-s7"
+      - "/plc/water-openplc"
+      - "/process-sim"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
