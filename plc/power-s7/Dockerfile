@@ -6,7 +6,7 @@
 # S7_NO_PASSWORD=1 lets any client stop the CPU or trip a breaker with no
 # authentication (the default weakness). Set to 0 and the scan loop ignores
 # unauthenticated trip/stop commands and re-asserts RUN.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*

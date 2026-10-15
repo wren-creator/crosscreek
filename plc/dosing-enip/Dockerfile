@@ -7,7 +7,7 @@
 # order to push a program that forces the metering pump wide open, defeating
 # the downstream overdose interlock. That is scenario 8, and it is a documented
 # stand-in for a real Studio 5000 download, not the exact wire format.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*

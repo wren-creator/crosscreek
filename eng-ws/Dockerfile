@@ -2,7 +2,7 @@
 # notes file with controller addresses and passwords, and (when
 # EXPOSE_REMOTE_ACCESS=1) answers an unauthenticated remote-desktop port. It is
 # the pivot box for scenarios 2 and 3.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*

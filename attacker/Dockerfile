@@ -4,7 +4,7 @@
 # addresses. The box sits on an internal-only bridge and has no route off the
 # lab except the static one this image adds to reach the range through the
 # firewall.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nmap tcpdump iproute2 iputils-ping netcat-openbsd curl less vim-tiny \

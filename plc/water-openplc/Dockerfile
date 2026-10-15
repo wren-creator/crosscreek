@@ -6,7 +6,7 @@
 # stop/start the CPU, and (when the keyswitch allows it) upload a new program.
 # That upload path is scenario 9. It is a stand-in for a vendor download, and
 # the docs say so.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
