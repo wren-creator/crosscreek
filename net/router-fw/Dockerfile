@@ -4,7 +4,7 @@
 #
 # The image also carries sshd so docker-compose.segmented.yml can reuse it as
 # the DMZ jump host with a different entrypoint.
-FROM debian:12-slim
+FROM debian:13-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nftables iproute2 iputils-ping tcpdump openssh-server ca-certificates \
