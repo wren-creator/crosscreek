@@ -7,7 +7,7 @@
 # reverse zone, and zone transfer (AXFR) open to the world. One `dig axfr` from
 # the edge and you have the whole plant. Segmented build: split-horizon public
 # view only (ns1/www/vpn), AXFR refused.
-FROM alpine:3.20
+FROM alpine:3.24
 
 RUN apk add --no-cache coredns
 
